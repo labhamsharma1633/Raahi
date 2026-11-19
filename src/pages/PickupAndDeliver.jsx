@@ -28,35 +28,43 @@ export default function PickupAndDeliver({
   const [timeWindow, setTimeWindow] = useState('Within 45 mins');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [createdRequest, setCreatedRequest] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const newReq = createRequest({
+    try {
+      const newReq = await createRequest({
         type: 'pickup',
-        title: title || `Collect Package from ${pickupLocationObj?.name || 'Collection Point'}`,
+        title: title.trim() || `Collect Package from ${pickupLocationObj?.name || 'Collection Point'}`,
         storeOrPickup: pickupLocationObj?.name || 'Collection Point',
         pickupArea: pickupLocationObj?.formattedAddress || '',
-        pickupLocationObj: pickupLocationObj,
-        destination: destinationLocationObj?.name || 'Destination',
+        pickupLocation: pickupLocationObj,
+        destination: destinationLocationObj?.name || destinationLocationObj?.formattedAddress || 'Delivery Destination',
         dropArea: destinationLocationObj?.formattedAddress || '',
-        destinationLocationObj: destinationLocationObj,
+        destinationLocation: destinationLocationObj,
         items: [
-          { name: title || "Pre-packaged parcel/document", qty: 1, note: pickupCode }
+          { name: title.trim() || "Pre-packaged parcel/document", qty: 1, note: pickupCode }
         ],
         itemBudget: 0,
         rewardFee: Number(rewardFee) || 50,
         detourMeters: 300,
         detourTimeMinutes: 7,
         neededBy: timeWindow,
-        notes: notes
+        notes: notes,
       });
-      setCreatedRequest(newReq);
-    }, 600);
+
+      if (newReq) {
+        setCreatedRequest(newReq);
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to broadcast pickup request. Please check required fields.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -97,7 +105,7 @@ export default function PickupAndDeliver({
             </div>
             <h3 className="text-2xl font-bold text-slate-900">Pickup Broadcasted!</h3>
             <p className="text-sm text-slate-600">
-              Students walking past <strong>{createdRequest.storeOrPickup}</strong> have received your request to transport it to <strong>{createdRequest.destination}</strong>.
+              Commuters moving past <strong>{createdRequest.storeOrPickup}</strong> have received your request to transport it to <strong>{createdRequest.destination}</strong>.
             </p>
 
             <div className="bg-teal-50 rounded-2xl p-5 text-left text-sm space-y-2 border border-teal-100">
@@ -117,7 +125,7 @@ export default function PickupAndDeliver({
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <PrimaryButton 
-                onClick={() => onNavigate(`tracking-${createdRequest.id}`)} 
+                onClick={() => onNavigate(`tracking-${createdRequest._id || createdRequest.id}`)} 
                 variant="primary" 
                 size="md"
               >
@@ -133,7 +141,12 @@ export default function PickupAndDeliver({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {errorMessage && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs font-medium">
+                {errorMessage}
+              </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
               <div className="lg:col-span-8 space-y-6">

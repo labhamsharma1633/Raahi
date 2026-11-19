@@ -110,6 +110,10 @@ class ApiClient {
     return await this.request('/requests/my');
   }
 
+  async getRequestById(id) {
+    return await this.request(`/requests/${id}`);
+  }
+
   async cancelRequest(id, reason) {
     return await this.request(`/requests/${id}/cancel`, {
       method: 'PATCH',

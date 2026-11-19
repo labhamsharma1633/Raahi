@@ -35,6 +35,7 @@ export default function BuyAndDeliver({
   const [timeWindow, setTimeWindow] = useState('Within 45 mins');
   const [notes, setNotes] = useState('Please call when reaching hostel gate, will come down immediately.');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [createdRequest, setCreatedRequest] = useState(null);
 
   const handleAddItem = () => {
@@ -53,31 +54,38 @@ export default function BuyAndDeliver({
     setItems(updated);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const newReq = createRequest({
+    try {
+      const newReq = await createRequest({
         type: 'buy',
-        title: title || `${items[0]?.name || 'Items'} from ${storeName}`,
-        storeOrPickup: storeName,
-        pickupArea: pickupLocationObj?.formattedAddress || pickupLocationObj?.name || storeName,
-        pickupLocationObj: pickupLocationObj,
-        destination: destinationLocationObj?.name || '',
-        dropArea: destinationLocationObj?.formattedAddress || destinationLocationObj?.city || "Campus Corridor",
-        destinationLocationObj: destinationLocationObj,
-        items: items.filter(it => it.name.trim() !== ''),
+        title: title.trim() || `${items[0]?.name || 'Items'} from ${storeName.trim()}`,
+        storeOrPickup: storeName.trim(),
+        pickupArea: pickupLocationObj?.formattedAddress || pickupLocationObj?.name || storeName.trim(),
+        pickupLocation: pickupLocationObj,
+        destination: destinationLocationObj?.name || destinationLocationObj?.formattedAddress || 'Delivery Destination',
+        dropArea: destinationLocationObj?.formattedAddress || destinationLocationObj?.city || 'India Commute Corridor',
+        destinationLocation: destinationLocationObj,
+        items: items.filter((it) => it.name.trim() !== ''),
         itemBudget: Number(estimatedBudget) || 100,
         rewardFee: Number(rewardFee) || 45,
         detourMeters: 250,
         detourTimeMinutes: 6,
         neededBy: timeWindow,
-        notes: notes
+        notes: notes,
       });
-      setCreatedRequest(newReq);
-    }, 600);
+
+      if (newReq) {
+        setCreatedRequest(newReq);
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Failed to broadcast errand. Please check all required fields.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -118,7 +126,7 @@ export default function BuyAndDeliver({
             </div>
             <h3 className="text-2xl font-bold text-slate-900">Request Broadcasted to Commuters!</h3>
             <p className="text-sm text-slate-600">
-              Your request for <strong>{createdRequest.title}</strong> has been shared with students walking past <strong>{createdRequest.storeOrPickup}</strong> towards <strong>{createdRequest.destination}</strong>.
+              Your request for <strong>{createdRequest.title}</strong> has been shared with commuters travelling from <strong>{createdRequest.storeOrPickup}</strong> towards <strong>{createdRequest.destination}</strong>.
             </p>
 
             <div className="bg-teal-50 rounded-2xl p-5 text-left text-sm space-y-2 border border-teal-100">
@@ -127,7 +135,7 @@ export default function BuyAndDeliver({
                 <span className="font-bold text-slate-800">₹{createdRequest.itemBudget}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Commute Travel Reward (Paid to Student):</span>
+                <span>Commute Travel Reward (Paid to Traveller):</span>
                 <span className="font-bold text-teal-800">₹{createdRequest.rewardFee}</span>
               </div>
               <div className="flex justify-between border-t border-teal-200 pt-2 font-bold text-slate-900 text-base">
@@ -138,7 +146,7 @@ export default function BuyAndDeliver({
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <PrimaryButton 
-                onClick={() => onNavigate(`tracking-${createdRequest.id}`)} 
+                onClick={() => onNavigate(`tracking-${createdRequest._id || createdRequest.id}`)} 
                 variant="primary" 
                 size="md"
               >
@@ -154,7 +162,12 @@ export default function BuyAndDeliver({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {errorMessage && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-2xl text-xs font-medium">
+                {errorMessage}
+              </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
               {/* Main Form Fields */}

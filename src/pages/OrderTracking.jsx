@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StatusStepper from '../components/StatusStepper';
 import PrimaryButton from '../components/PrimaryButton';
 import { 
@@ -11,9 +11,11 @@ import {
   Clock, 
   IndianRupee, 
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { useRaahi } from '../context/RaahiContext';
+import { apiClient } from '../services/apiClient';
 import { REQUEST_STATUS } from '../utils/constants';
 
 export default function OrderTracking({
@@ -22,18 +24,62 @@ export default function OrderTracking({
   onBack,
   onNavigate
 }) {
-  const { requests, currentRole, advanceDeliveryStatus, showToast } = useRaahi();
+  const { requests, myRequests, currentRole, advanceDeliveryStatus, showToast } = useRaahi();
+  const [fetchedOrder, setFetchedOrder] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [callAlert, setCallAlert] = useState(false);
   const [inputOtp, setInputOtp] = useState('');
 
-  // Find order from context or fallback
-  const activeOrder = propOrder || requests.find(r => r.id === orderId) || requests[0];
+  // 1. Search order across propOrder, fetchedOrder, myRequests and public requests
+  const allKnownOrders = [...(myRequests || []), ...(requests || [])];
+  const activeOrder = propOrder || fetchedOrder || allKnownOrders.find(r => {
+    const rId = String(r._id || r.id);
+    return rId === String(orderId);
+  });
+
+  // 2. If not found in memory (e.g. page reload or direct navigation), fetch from backend API
+  useEffect(() => {
+    if (!activeOrder && orderId && orderId !== 'undefined') {
+      setLoading(true);
+      apiClient.getRequestById(orderId)
+        .then(res => {
+          if (res?.data?.request) {
+            setFetchedOrder(res.data.request);
+          }
+        })
+        .catch(err => {
+          console.warn('Could not fetch order by ID:', err.message);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [orderId, activeOrder]);
+
+  if (loading) {
+    return (
+      <div className="p-12 text-center bg-raahi-bg min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-raahi-teal animate-spin" />
+          <p className="text-xs font-semibold text-slate-500">Retrieving live errand details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!activeOrder) {
     return (
-      <div className="p-12 text-center bg-raahi-bg min-h-screen">
-        <p className="text-slate-600 mb-4">Order not found.</p>
-        <PrimaryButton onClick={onBack}>Return to Dashboard</PrimaryButton>
+      <div className="p-12 text-center bg-raahi-bg min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-card space-y-4">
+          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">Order Not Found</h3>
+          <p className="text-xs text-slate-500">
+            We could not find an active errand matching ID <span className="font-mono text-slate-700 font-semibold">{orderId || 'N/A'}</span>.
+          </p>
+          <PrimaryButton onClick={onBack}>Return to Dashboard</PrimaryButton>
+        </div>
       </div>
     );
   }
@@ -46,16 +92,17 @@ export default function OrderTracking({
 
   const isDelivered = activeOrder.status === REQUEST_STATUS.DELIVERED;
   const isTraveller = currentRole === 'traveller';
+  const resolvedId = activeOrder._id || activeOrder.id;
 
   const handleAdvanceStep = () => {
     if (activeOrder.status === REQUEST_STATUS.IN_TRANSIT) {
-      if (inputOtp.trim() !== activeOrder.otp.trim()) {
+      if (inputOtp.trim() !== String(activeOrder.otp || '').trim()) {
         showToast(`Verification code must match customer's 4-digit OTP (${activeOrder.otp})`, 'error');
         return;
       }
-      advanceDeliveryStatus(activeOrder.id, inputOtp);
+      advanceDeliveryStatus(resolvedId, inputOtp);
     } else {
-      advanceDeliveryStatus(activeOrder.id);
+      advanceDeliveryStatus(resolvedId);
     }
   };
 
@@ -82,7 +129,7 @@ export default function OrderTracking({
                 Live Errand Tracking
               </span>
               <h2 className="text-xl sm:text-2xl font-extrabold text-white">
-                Order Tracking: {activeOrder.id}
+                Order Tracking: #{String(resolvedId).slice(-6)}
               </h2>
             </div>
           </div>

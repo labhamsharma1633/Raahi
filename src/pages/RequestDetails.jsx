@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PrimaryButton from '../components/PrimaryButton';
 import { 
   ArrowLeft, 
@@ -10,9 +10,12 @@ import {
   IndianRupee, 
   Star, 
   ShieldCheck, 
-  CheckCircle2
+  CheckCircle2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useRaahi } from '../context/RaahiContext';
+import { apiClient } from '../services/apiClient';
 import { REQUEST_STATUS } from '../utils/constants';
 
 export default function RequestDetails({
@@ -21,17 +24,60 @@ export default function RequestDetails({
   onBack,
   onNavigate
 }) {
-  const { requests, currentRole, acceptRequest } = useRaahi();
+  const { requests, myRequests, currentRole, acceptRequest } = useRaahi();
+  const [fetchedRequest, setFetchedRequest] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
 
   // Find request from context by ID or fallback to prop
-  const request = propRequest || requests.find(r => r.id === requestId) || requests[0];
+  const allKnown = [...(myRequests || []), ...(requests || [])];
+  const request = propRequest || fetchedRequest || allKnown.find(r => {
+    const rId = String(r._id || r.id);
+    return rId === String(requestId);
+  });
+
+  useEffect(() => {
+    if (!request && requestId && requestId !== 'undefined') {
+      setLoading(true);
+      apiClient.getRequestById(requestId)
+        .then(res => {
+          if (res?.data?.request) {
+            setFetchedRequest(res.data.request);
+          }
+        })
+        .catch(err => {
+          console.warn('Could not fetch request details:', err.message);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [requestId, request]);
+
+  if (loading) {
+    return (
+      <div className="p-12 text-center bg-raahi-bg min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-raahi-teal animate-spin" />
+          <p className="text-xs font-semibold text-slate-500">Loading errand details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!request) {
     return (
-      <div className="p-12 text-center bg-raahi-bg min-h-screen">
-        <p className="text-slate-600 mb-4">Request not found.</p>
-        <PrimaryButton onClick={onBack}>Return to Home</PrimaryButton>
+      <div className="p-12 text-center bg-raahi-bg min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-card space-y-4">
+          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">Request Not Found</h3>
+          <p className="text-xs text-slate-500">
+            We could not find an errand matching ID <span className="font-mono text-slate-700 font-semibold">{requestId || 'N/A'}</span>.
+          </p>
+          <PrimaryButton onClick={onBack}>Return to Home</PrimaryButton>
+        </div>
       </div>
     );
   }
@@ -39,15 +85,18 @@ export default function RequestDetails({
   const isBuy = request.type === 'buy';
   const isTraveller = currentRole === 'traveller';
   const isAvailable = request.status === REQUEST_STATUS.OPEN;
+  const resolvedReqId = request._id || request.id;
 
-  const handleAcceptClick = () => {
+  const handleAcceptClick = async () => {
     setAccepted(true);
-    setTimeout(() => {
-      const res = acceptRequest(request.id);
+    try {
+      const res = await acceptRequest(resolvedReqId);
       if (res && onNavigate) {
         onNavigate('traveller-active');
       }
-    }, 500);
+    } catch {
+      setAccepted(false);
+    }
   };
 
   return (

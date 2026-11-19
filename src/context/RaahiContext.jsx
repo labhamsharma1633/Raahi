@@ -79,9 +79,24 @@ export function RaahiProvider({ children }) {
     }
   }, [activeNetwork]);
 
+  // Initial load of locally stored requests for instant feedback & persistence
+  useEffect(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) {
+        setMyRequests(cached);
+      }
+    } catch {}
+  }, []);
+
   const refreshUserData = useCallback(async () => {
     if (!user) {
-      setMyRequests([]);
+      try {
+        const cached = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
+        setMyRequests(cached);
+      } catch {
+        setMyRequests([]);
+      }
       setMyRoutes([]);
       setActiveRouteState(null);
       setActiveDeliveries([]);
@@ -90,9 +105,25 @@ export function RaahiProvider({ children }) {
     }
 
     try {
-      // 1. Fetch user's own requests
+      // 1. Fetch user's own requests from MongoDB
       const reqRes = await apiClient.getMyRequests().catch(() => ({ data: { requests: [] } }));
-      setMyRequests(reqRes?.data?.requests || []);
+      const dbReqs = reqRes?.data?.requests || [];
+
+      // Combine with local cache to avoid losing recent creations
+      let localReqs = [];
+      try {
+        localReqs = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
+      } catch {}
+
+      const combined = [...dbReqs];
+      localReqs.forEach((lr) => {
+        const lrId = String(lr._id || lr.id);
+        if (!combined.some((r) => String(r._id || r.id) === lrId)) {
+          combined.push(lr);
+        }
+      });
+
+      setMyRequests(combined);
 
       // 2. Fetch user's published routes
       const routesRes = await apiClient.getMyRoutes().catch(() => ({ data: { routes: [] } }));
@@ -202,27 +233,79 @@ export function RaahiProvider({ children }) {
 
   // --- 4. CUSTOMER ACTIONS ---
   const createRequest = async (requestData) => {
-    if (!user) {
-      showToast('Please sign in to post a request', 'error');
-      return null;
+    // Standardize locations so backend locationSchema is always satisfied
+    const pickupLoc = requestData.pickupLocation || requestData.pickupLocationObj || {
+      name: requestData.storeOrPickup || 'Pickup Spot',
+      formattedAddress: requestData.pickupArea || requestData.storeOrPickup || 'Pickup Spot',
+      city: user?.city || 'India',
+      state: '',
+    };
+
+    const destLoc = requestData.destinationLocation || requestData.destinationLocationObj || {
+      name: requestData.destination || 'Delivery Destination',
+      formattedAddress: requestData.dropArea || requestData.destination || 'Delivery Location',
+      city: user?.city || 'India',
+      state: '',
+    };
+
+    const normalizedPayload = {
+      ...requestData,
+      title: requestData.title || `${requestData.storeOrPickup || 'Item'} Delivery`,
+      storeOrPickup: requestData.storeOrPickup || pickupLoc.name || 'Pickup Spot',
+      destination: requestData.destination || destLoc.name || 'Delivery Destination',
+      pickupLocation: pickupLoc,
+      destinationLocation: destLoc,
+      rewardFee: Number(requestData.rewardFee) || 45,
+      itemBudget: Number(requestData.itemBudget) || 0,
+      networkScope: (requestData.networkScope || activeNetwork).toUpperCase(),
+    };
+
+    // If authenticated, persist to MongoDB Atlas via backend API
+    if (user) {
+      try {
+        const res = await apiClient.createRequest(normalizedPayload);
+        if (res?.data?.request) {
+          const req = res.data.request;
+          showToast(`Request "${req.title}" broadcasted to ${activeNetwork} travellers!`);
+
+          // Cache locally to ensure immediate availability
+          try {
+            const cached = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
+            const updated = [req, ...cached.filter((r) => String(r._id || r.id) !== String(req._id || req.id))];
+            localStorage.setItem('raahi_my_requests', JSON.stringify(updated.slice(0, 50)));
+          } catch {}
+
+          setMyRequests((prev) => [req, ...prev.filter((r) => String(r._id || r.id) !== String(req._id))]);
+          await refreshUserData();
+          await refreshOpenRequests();
+          return req;
+        }
+      } catch (err) {
+        showToast(err.message || 'Failed to create request', 'error');
+        throw err;
+      }
     }
 
+    // Resilient local persistence for prototype / unauthenticated testing
+    const localId = `loc_${Date.now()}`;
+    const localOtp = String(Math.floor(1000 + Math.random() * 9000));
+    const localReq = {
+      _id: localId,
+      id: localId,
+      ...normalizedPayload,
+      status: 'OPEN',
+      otp: localOtp,
+      createdAt: new Date().toISOString(),
+    };
+
     try {
-      const payload = {
-        ...requestData,
-        networkScope: (requestData.networkScope || activeNetwork).toUpperCase(),
-      };
-      const res = await apiClient.createRequest(payload);
-      if (res?.data?.request) {
-        showToast(`Request "${res.data.request.title}" broadcasted to ${activeNetwork} travellers!`);
-        await refreshUserData();
-        await refreshOpenRequests();
-        return res.data.request;
-      }
-    } catch (err) {
-      showToast(err.message || 'Failed to create request', 'error');
-      throw err;
-    }
+      const cached = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
+      localStorage.setItem('raahi_my_requests', JSON.stringify([localReq, ...cached].slice(0, 50)));
+    } catch {}
+
+    setMyRequests((prev) => [localReq, ...prev]);
+    showToast(`Request created locally. Sign in to broadcast across India!`, 'info');
+    return localReq;
   };
 
   const cancelRequest = async (requestId, reason) => {
