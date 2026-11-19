@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import RequestCard from '../../components/RequestCard';
+import SmartPoolBuilder from '../../components/SmartPoolBuilder';
 import { useRaahi } from '../../context/RaahiContext';
 import { 
   ArrowLeft, 
@@ -11,7 +12,9 @@ import {
   CheckCircle2, 
   MapPin, 
   Clock, 
-  IndianRupee 
+  IndianRupee,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import PrimaryButton from '../../components/PrimaryButton';
 
@@ -21,11 +24,13 @@ export default function MatchingRequestsPage({ onNavigate }) {
     setRole, 
     activeRoute, 
     matchingRequests, 
-    acceptRequest 
+    acceptRequest,
+    showToast
   } = useRaahi();
 
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('lowest-detour');
+  const [showSmartPool, setShowSmartPool] = useState(false);
 
   const filtered = matchingRequests.filter((r) => {
     if (filterType === 'all') return true;
@@ -57,6 +62,14 @@ export default function MatchingRequestsPage({ onNavigate }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSmartPool(true)}
+              className="text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5 hover:scale-105 border border-amber-300"
+            >
+              <Layers className="w-4 h-4 text-slate-950" />
+              <span>Build Smart Pool</span>
+            </button>
+
             <button
               onClick={() => onNavigate('routes')}
               className="text-xs font-bold bg-[#08282A] hover:bg-black/40 text-teal-200 px-3.5 py-2 rounded-xl border border-teal-500/30 transition-colors flex items-center gap-1.5"
@@ -104,6 +117,32 @@ export default function MatchingRequestsPage({ onNavigate }) {
                     {matchingRequests.length} Eligible Errands
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* Smart Pool Feature Banner */}
+            {matchingRequests.length >= 2 && (
+              <div className="bg-gradient-to-r from-amber-50 via-amber-100/60 to-teal-50 border border-amber-300/80 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-soft">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-sm">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">
+                      Combine Multiple Errands with Raahi Smart Pool
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Pool 2–4 errands on this single commute to earn ₹90–₹200+ with automated stop sequencing and zero extra walking.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowSmartPool(true)}
+                  className="px-4 py-2 rounded-xl bg-raahi-teal hover:bg-[#072426] text-white font-bold text-xs transition-all whitespace-nowrap shadow-sm hover:scale-105 shrink-0"
+                >
+                  Launch Smart Pool ➔
+                </button>
               </div>
             )}
 
@@ -194,6 +233,20 @@ export default function MatchingRequestsPage({ onNavigate }) {
 
         </div>
       </div>
+
+      {/* Smart Pool Modal */}
+      {showSmartPool && (
+        <SmartPoolBuilder
+          activeRoute={activeRoute}
+          openRequests={matchingRequests}
+          onClose={() => setShowSmartPool(false)}
+          onPoolConfirmed={(pool) => {
+            setShowSmartPool(false);
+            showToast('Smart Pool created! Navigating to your active pooled journey.');
+            onNavigate('traveller-active');
+          }}
+        />
+      )}
     </div>
   );
 }

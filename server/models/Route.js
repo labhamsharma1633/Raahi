@@ -93,6 +93,11 @@ const routeSchema = new mongoose.Schema(
       default: true,
       index: true,
     },
+    activeSmartPool: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SmartPool',
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -18,6 +18,7 @@ import {
   Package
 } from 'lucide-react';
 import PrimaryButton from '../../components/PrimaryButton';
+import ActiveSmartPoolCard from '../../components/ActiveSmartPoolCard';
 import { REQUEST_STATUS } from '../../utils/constants';
 
 export default function ActiveDeliveriesPage({ onNavigate }) {
@@ -26,6 +27,9 @@ export default function ActiveDeliveriesPage({ onNavigate }) {
     currentRole, 
     setRole, 
     activeDeliveries, 
+    activeSmartPool,
+    advanceSmartPoolStop,
+    cancelSmartPool,
     advanceDeliveryStatus, 
     disputeDelivery, 
     cancelRequest, 
@@ -121,6 +125,15 @@ export default function ActiveDeliveriesPage({ onNavigate }) {
 
           <div className="flex-1 w-full space-y-6">
             
+            {/* Active Smart Pool Card */}
+            {activeSmartPool && (
+              <ActiveSmartPoolCard
+                pool={activeSmartPool}
+                onAdvance={advanceSmartPoolStop}
+                onCancel={cancelSmartPool}
+              />
+            )}
+
             {activeDeliveries.length > 0 ? (
               activeDeliveries.map((req) => {
                 const stepIndex = 
@@ -275,7 +288,7 @@ export default function ActiveDeliveriesPage({ onNavigate }) {
                   </div>
                 );
               })
-            ) : (
+            ) : !activeSmartPool ? (
               <div className="py-20 bg-white rounded-3xl p-8 text-center border border-dashed border-slate-300">
                 <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h4 className="text-base font-bold text-slate-700">No active deliveries right now</h4>
@@ -288,7 +301,7 @@ export default function ActiveDeliveriesPage({ onNavigate }) {
                   </PrimaryButton>
                 </div>
               </div>
-            )}
+            ) : null}
 
           </div>
 

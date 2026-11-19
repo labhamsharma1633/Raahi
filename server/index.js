@@ -52,6 +52,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/deliveries', require('./routes/deliveries'));
+app.use('/api/smart-pool', require('./routes/smartPool'));
 
 // 404 — catch-all for undefined routes
 app.use((_req, res) => {

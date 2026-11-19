@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import DashboardSidebar from '../../components/DashboardSidebar';
 import RequestCard from '../../components/RequestCard';
 import StatusStepper from '../../components/StatusStepper';
+import ActiveSmartPoolCard from '../../components/ActiveSmartPoolCard';
+import SmartPoolBuilder from '../../components/SmartPoolBuilder';
 import { useRaahi } from '../../context/RaahiContext';
 import { 
   Footprints, 
@@ -15,7 +17,9 @@ import {
   SlidersHorizontal,
   Navigation,
   PlusCircle,
-  ShieldCheck
+  ShieldCheck,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import PrimaryButton from '../../components/PrimaryButton';
 import { REQUEST_STATUS } from '../../utils/constants';
@@ -29,10 +33,16 @@ export default function TravellerDashboard({ onNavigate }) {
     activeRoute, 
     matchingRequests, 
     activeDeliveries, 
+    activeSmartPool,
+    advanceSmartPoolStop,
+    cancelSmartPool,
     travellerStats, 
     acceptRequest, 
-    advanceDeliveryStatus 
+    advanceDeliveryStatus,
+    showToast
   } = useRaahi();
+
+  const [showSmartPool, setShowSmartPool] = useState(false);
 
   // If user is not yet loaded, show clean loading placeholder instead of crashing
   if (!user) {
@@ -191,8 +201,17 @@ export default function TravellerDashboard({ onNavigate }) {
               )}
             </div>
 
+            {/* Active Smart Pool Spotlight */}
+            {activeSmartPool && (
+              <ActiveSmartPoolCard
+                pool={activeSmartPool}
+                onAdvance={advanceSmartPoolStop}
+                onCancel={cancelSmartPool}
+              />
+            )}
+
             {/* Active Task in Progress Spotlight */}
-            {activeDeliveries.length > 0 && (
+            {activeDeliveries.length > 0 && !activeSmartPool && (
               <div className="bg-white rounded-3xl p-6 sm:p-7 border border-amber-300 shadow-card space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
@@ -247,13 +266,24 @@ export default function TravellerDashboard({ onNavigate }) {
                   </h3>
                   <p className="text-xs text-slate-500">Filtered strictly within your +{activeRoute?.maxDetourMeters || 600}m detour tolerance</p>
                 </div>
-                <button
-                  onClick={() => onNavigate('traveller-matching')}
-                  className="text-xs font-bold text-raahi-teal hover:underline flex items-center gap-1"
-                >
-                  <span>Explore Full Matching Board</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-3">
+                  {matchingRequests.length >= 2 && (
+                    <button
+                      onClick={() => setShowSmartPool(true)}
+                      className="text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 hover:scale-105"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                      <span>Build Smart Pool</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onNavigate('traveller-matching')}
+                    className="text-xs font-bold text-raahi-teal hover:underline flex items-center gap-1"
+                  >
+                    <span>Explore Full Matching Board</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,6 +313,20 @@ export default function TravellerDashboard({ onNavigate }) {
 
         </div>
       </div>
+
+      {/* Smart Pool Modal */}
+      {showSmartPool && (
+        <SmartPoolBuilder
+          activeRoute={activeRoute}
+          openRequests={matchingRequests}
+          onClose={() => setShowSmartPool(false)}
+          onPoolConfirmed={(pool) => {
+            setShowSmartPool(false);
+            showToast('Smart Pool confirmed! Loaded into your active trip.');
+            onNavigate('traveller-active');
+          }}
+        />
+      )}
     </div>
   );
 }

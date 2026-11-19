@@ -21,6 +21,7 @@ export function RaahiProvider({ children }) {
   const [myRoutes, setMyRoutes] = useState([]);
   const [activeRoute, setActiveRouteState] = useState(null);
   const [activeDeliveries, setActiveDeliveries] = useState([]);
+  const [activeSmartPool, setActiveSmartPool] = useState(null);
   const [earningsData, setEarningsData] = useState({ totalEarned: 0, transactions: [] });
 
   // Notifications & Toast
@@ -157,6 +158,10 @@ export function RaahiProvider({ children }) {
       // 3. Fetch active deliveries carried by user
       const delivRes = await apiClient.getActiveDeliveries().catch(() => ({ data: { deliveries: [] } }));
       setActiveDeliveries(delivRes?.data?.deliveries || []);
+
+      // 3b. Fetch active smart pool
+      const poolRes = await apiClient.getActiveSmartPool().catch(() => ({ data: null }));
+      setActiveSmartPool(poolRes?.data || null);
 
       // 4. Fetch user's real earnings
       const earnRes = await apiClient.getEarnings().catch(() => ({ data: { totalEarned: 0, transactions: [] } }));
@@ -446,6 +451,59 @@ export function RaahiProvider({ children }) {
     }
   };
 
+  // --- SMART POOL METHODS ---
+  const confirmSmartPool = async (routeId, requestIds) => {
+    if (!user) {
+      showToast('Please sign in to pool delivery errands', 'error');
+      return false;
+    }
+    try {
+      const res = await apiClient.confirmSmartPool(routeId, requestIds);
+      if (res?.data) {
+        showToast(res.message || 'Smart Pool confirmed and locked!');
+        setActiveSmartPool(res.data);
+        await refreshUserData();
+        await refreshOpenRequests();
+        return res.data;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to confirm Smart Pool', 'error');
+      return false;
+    }
+  };
+
+  const advanceSmartPoolStop = async (poolId, otpCode) => {
+    try {
+      const res = await apiClient.advanceSmartPoolStop(poolId, otpCode);
+      if (res?.data) {
+        showToast(res.message || 'Stop updated');
+        setActiveSmartPool(res.data);
+        await refreshUserData();
+        await refreshOpenRequests();
+        return res.data;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to advance stop', 'error');
+      return false;
+    }
+  };
+
+  const cancelSmartPool = async (poolId, reason) => {
+    try {
+      const res = await apiClient.cancelSmartPool(poolId, reason);
+      if (res?.data) {
+        showToast(res.message || 'Smart Pool cancelled');
+        setActiveSmartPool(null);
+        await refreshUserData();
+        await refreshOpenRequests();
+        return res.data;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to cancel Smart Pool', 'error');
+      return false;
+    }
+  };
+
   // --- 6. DYNAMIC ROUTE MATCHES ---
   const matchingRequests = useMemo(() => {
     return findMatchingRequests(activeRoute, requests);
@@ -519,6 +577,11 @@ export function RaahiProvider({ children }) {
         publishRoute,
         setActiveRoute,
         activeDeliveries,
+        activeSmartPool,
+        setActiveSmartPool,
+        confirmSmartPool,
+        advanceSmartPoolStop,
+        cancelSmartPool,
         acceptRequest,
         advanceDeliveryStatus,
         matchingRequests,

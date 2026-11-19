@@ -114,6 +114,11 @@ const requestSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    smartPool: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SmartPool',
+      default: null,
+    },
     acceptedAt: { type: Date, default: null },
     pickedUpAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },

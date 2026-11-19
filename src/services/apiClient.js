@@ -158,6 +158,48 @@ class ApiClient {
   async getEarnings() {
     return await this.request('/deliveries/earnings');
   }
+
+  // Smart Pool Multi-Stop APIs
+  async getSmartPoolCandidates(routeId) {
+    const query = routeId ? `?routeId=${routeId}` : '';
+    return await this.request(`/smart-pool/candidates${query}`);
+  }
+
+  async optimizeSmartPool(routeId, requestIds) {
+    return await this.request('/smart-pool/optimize', {
+      method: 'POST',
+      body: JSON.stringify({ routeId, requestIds }),
+    });
+  }
+
+  async confirmSmartPool(routeId, requestIds) {
+    return await this.request('/smart-pool/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ routeId, requestIds }),
+    });
+  }
+
+  async getActiveSmartPool() {
+    return await this.request('/smart-pool/active');
+  }
+
+  async getSmartPoolById(id) {
+    return await this.request(`/smart-pool/${id}`);
+  }
+
+  async advanceSmartPoolStop(id, otpCode) {
+    return await this.request(`/smart-pool/${id}/advance-stop`, {
+      method: 'POST',
+      body: JSON.stringify({ otpCode }),
+    });
+  }
+
+  async cancelSmartPool(id, reason) {
+    return await this.request(`/smart-pool/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
