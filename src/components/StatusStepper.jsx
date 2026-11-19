@@ -4,11 +4,13 @@ import { CheckCircle2, Clock, CircleDot, PackageCheck, ShoppingBag, Truck } from
 export default function StatusStepper({ 
   currentStep = 1, 
   steps = [
-    { label: "Request Placed", description: "Broadcasted to campus travellers along route", time: "1:15 PM" },
-    { label: "Traveller Assigned", description: "Aarav is travelling from Kamla Nagar", time: "1:22 PM" },
-    { label: "Item Collected", description: "Purchased & checked receipt", time: "1:35 PM" },
-    { label: "On The Way", description: "Walking towards Gwyer Hall (Detour +200m)", time: "ETA 1:45 PM" },
-    { label: "Delivered", description: "Handover completed & verified", time: "Pending" }
+    { label: "Request Created", description: "Errand registered and verified in system", time: "" },
+    { label: "Waiting for Traveller", description: "Broadcasting to active travellers along this route", time: "" },
+    { label: "Traveller Accepted", description: "A verified traveller matched and accepted the errand", time: "" },
+    { label: "Pickup in Progress", description: "Traveller is moving towards the pickup point", time: "" },
+    { label: "Picked Up", description: "Items/package collected and verified by traveller", time: "" },
+    { label: "Out for Delivery", description: "Traveller is en route to your delivery destination", time: "" },
+    { label: "Delivered", description: "Handover completed and verified via 4-digit code", time: "" }
   ]
 }) {
   return (

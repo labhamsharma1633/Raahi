@@ -52,7 +52,7 @@ export default function MyRequestsPage({ onNavigate }) {
 
   const handleConfirmCancel = (reason) => {
     if (selectedReqForCancel) {
-      cancelRequest(selectedReqForCancel.id, reason);
+      cancelRequest(selectedReqForCancel._id || selectedReqForCancel.id, reason);
     }
     setCancelModalOpen(false);
     setSelectedReqForCancel(null);
@@ -130,7 +130,7 @@ export default function MyRequestsPage({ onNavigate }) {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  All ({requests.length})
+                  All ({myRequests.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('awaiting')}
@@ -140,7 +140,7 @@ export default function MyRequestsPage({ onNavigate }) {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Awaiting Match ({requests.filter(r => r.status === REQUEST_STATUS.OPEN).length})
+                  Awaiting Match ({myRequests.filter(r => r.status === REQUEST_STATUS.OPEN).length})
                 </button>
                 <button
                   onClick={() => setActiveTab('in-progress')}
@@ -150,7 +150,7 @@ export default function MyRequestsPage({ onNavigate }) {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  In Progress ({requests.filter(r => [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status)).length})
+                  In Progress ({myRequests.filter(r => [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status)).length})
                 </button>
                 <button
                   onClick={() => setActiveTab('completed')}
@@ -160,7 +160,7 @@ export default function MyRequestsPage({ onNavigate }) {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Completed ({requests.filter(r => r.status === REQUEST_STATUS.DELIVERED).length})
+                  Completed ({myRequests.filter(r => r.status === REQUEST_STATUS.DELIVERED).length})
                 </button>
                 <button
                   onClick={() => setActiveTab('cancelled')}
@@ -170,7 +170,7 @@ export default function MyRequestsPage({ onNavigate }) {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Cancelled ({requests.filter(r => r.status === REQUEST_STATUS.CANCELLED).length})
+                  Cancelled ({myRequests.filter(r => r.status === REQUEST_STATUS.CANCELLED).length})
                 </button>
               </div>
             </div>
@@ -178,77 +178,80 @@ export default function MyRequestsPage({ onNavigate }) {
             {/* List of Requests */}
             <div className="space-y-4">
               {filtered.length > 0 ? (
-                filtered.map((req) => (
-                  <div
-                    key={req.id}
-                    className="bg-white rounded-3xl p-5 border border-raahi-border shadow-soft space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
-                          req.type === 'buy' ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'bg-amber-50 text-amber-900 border border-amber-200'
-                        }`}>
-                          {req.type === 'buy' ? 'Buy & Deliver' : 'Pick Up'}
-                        </span>
-                        <span className="text-xs font-mono text-slate-400">#{req.id}</span>
-                        <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                          {req.status}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          ₹{req.rewardFee} Commute Reward
-                        </span>
-                        {req.status === REQUEST_STATUS.OPEN && (
-                          <button
-                            onClick={() => handleOpenCancel(req)}
-                            className="text-xs font-bold text-rose-600 hover:text-rose-800"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 leading-snug">{req.title}</h4>
-                        <span className="text-slate-400 text-[11px] block mt-0.5">Needed: {req.neededBy}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block">From</span>
-                        <span className="font-semibold text-slate-800">{req.storeOrPickup}</span>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block mt-1">To</span>
-                        <span className="font-semibold text-slate-800">{req.destination}</span>
-                      </div>
-                      <div className="flex flex-col justify-between items-start md:items-end gap-2">
-                        {req.otp && (
-                          <div className="text-right">
-                            <span className="text-[10px] text-slate-400 block font-bold">OTP CODE</span>
-                            <span className="text-sm font-mono font-black text-raahi-teal bg-teal-50 px-2 py-0.5 rounded">
-                              {req.otp}
-                            </span>
-                          </div>
-                        )}
+                filtered.map((req) => {
+                  const reqKey = req._id || req.id;
+                  return (
+                    <div
+                      key={reqKey}
+                      className="bg-white rounded-3xl p-5 border border-raahi-border shadow-soft space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onNavigate(`request-details-${req.id}`)}
-                            className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-colors"
-                          >
-                            View Details
-                          </button>
-                          <button
-                            onClick={() => onNavigate(`tracking-${req.id}`)}
-                            className="text-xs font-bold text-white bg-raahi-teal hover:bg-[#072528] px-3.5 py-1.5 rounded-xl transition-colors"
-                          >
-                            Track Live
-                          </button>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
+                            req.type === 'buy' ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'bg-amber-50 text-amber-900 border border-amber-200'
+                          }`}>
+                            {req.type === 'buy' ? 'Buy & Deliver' : 'Pick Up'}
+                          </span>
+                          <span className="text-xs font-mono text-slate-400">#{String(reqKey).slice(-6)}</span>
+                          <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                            {req.status}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            ₹{req.rewardFee} Commute Reward
+                          </span>
+                          {req.status === REQUEST_STATUS.OPEN && (
+                            <button
+                              onClick={() => handleOpenCancel(req)}
+                              className="text-xs font-bold text-rose-600 hover:text-rose-800"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 leading-snug">{req.title}</h4>
+                          <span className="text-slate-400 text-[11px] block mt-0.5">Needed: {req.neededBy}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase font-bold block">From</span>
+                          <span className="font-semibold text-slate-800">{req.storeOrPickup}</span>
+                          <span className="text-slate-400 text-[10px] uppercase font-bold block mt-1">To</span>
+                          <span className="font-semibold text-slate-800">{req.destination}</span>
+                        </div>
+                        <div className="flex flex-col justify-between items-start md:items-end gap-2">
+                          {req.otp && (
+                            <div className="text-right">
+                              <span className="text-[10px] text-slate-400 block font-bold">OTP CODE</span>
+                              <span className="text-sm font-mono font-black text-raahi-teal bg-teal-50 px-2 py-0.5 rounded">
+                                {req.otp}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => onNavigate(`request-details-${reqKey}`)}
+                              className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-colors"
+                            >
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => onNavigate(`tracking-${reqKey}`)}
+                              className="text-xs font-bold text-white bg-raahi-teal hover:bg-[#072528] px-3.5 py-1.5 rounded-xl transition-colors"
+                            >
+                              Track Live
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="py-16 bg-white rounded-3xl p-8 text-center border border-dashed border-slate-300">
                   <h4 className="text-base font-bold text-slate-700">No requests in this view</h4>

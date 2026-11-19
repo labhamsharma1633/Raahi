@@ -16,9 +16,9 @@ import PrimaryButton from '../../components/PrimaryButton';
 import { REQUEST_STATUS } from '../../utils/constants';
 
 export default function OrderHistoryPage({ onNavigate }) {
-  const { currentRole, setRole, requests, createRequest } = useRaahi();
+  const { currentRole, setRole, myRequests, createRequest } = useRaahi();
 
-  const completedRequests = requests.filter(r => r.status === REQUEST_STATUS.DELIVERED);
+  const completedRequests = (myRequests || []).filter(r => r.status === REQUEST_STATUS.DELIVERED);
 
   const handleReorder = (order) => {
     const reordered = {
