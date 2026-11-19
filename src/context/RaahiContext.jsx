@@ -265,21 +265,35 @@ export function RaahiProvider({ children }) {
       try {
         const res = await apiClient.createRequest(normalizedPayload);
         if (res?.data?.request) {
-          const req = res.data.request;
+          const rawReq = res.data.request;
+          const canonicalId = String(rawReq._id || rawReq.id || rawReq.requestId || '');
+          if (!canonicalId) {
+            throw new Error('Server did not return a valid request identifier');
+          }
+
+          const req = {
+            ...rawReq,
+            _id: canonicalId,
+            id: canonicalId,
+            requestId: canonicalId,
+            orderId: canonicalId,
+          };
+
           showToast(`Request "${req.title}" broadcasted to ${activeNetwork} travellers!`);
 
           // Cache locally to ensure immediate availability
           try {
             const cached = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
-            const updated = [req, ...cached.filter((r) => String(r._id || r.id) !== String(req._id || req.id))];
+            const updated = [req, ...cached.filter((r) => String(r._id || r.id) !== canonicalId)];
             localStorage.setItem('raahi_my_requests', JSON.stringify(updated.slice(0, 50)));
           } catch {}
 
-          setMyRequests((prev) => [req, ...prev.filter((r) => String(r._id || r.id) !== String(req._id))]);
+          setMyRequests((prev) => [req, ...prev.filter((r) => String(r._id || r.id) !== canonicalId)]);
           await refreshUserData();
           await refreshOpenRequests();
           return req;
         }
+        throw new Error('Malformed response from errand creation API');
       } catch (err) {
         showToast(err.message || 'Failed to create request', 'error');
         throw err;
@@ -287,11 +301,13 @@ export function RaahiProvider({ children }) {
     }
 
     // Resilient local persistence for prototype / unauthenticated testing
-    const localId = `loc_${Date.now()}`;
+    const localId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const localOtp = String(Math.floor(1000 + Math.random() * 9000));
     const localReq = {
       _id: localId,
       id: localId,
+      requestId: localId,
+      orderId: localId,
       ...normalizedPayload,
       status: 'OPEN',
       otp: localOtp,

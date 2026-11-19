@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import StatusStepper from '../components/StatusStepper';
 import OrderTrackingMap from '../components/OrderTrackingMap';
 import ConfirmModal from '../components/ConfirmModal';
@@ -40,6 +41,8 @@ import { REQUEST_STATUS } from '../utils/constants';
  */
 export default function OrderTracking({
   orderId,
+  id,
+  requestId,
   order: propOrder,
   onBack,
   onNavigate
@@ -54,6 +57,20 @@ export default function OrderTracking({
     showToast 
   } = useRaahi();
 
+  // Safely extract from React Router params (:orderId, :id, :requestId)
+  let routeParams = {};
+  try {
+    routeParams = useParams() || {};
+  } catch (e) {
+    routeParams = {};
+  }
+
+  // Support props and route params interchangeably
+  const rawId = orderId || id || requestId || routeParams.orderId || routeParams.id || routeParams.requestId || '';
+  const searchId = (rawId && String(rawId).trim() !== 'undefined' && String(rawId).trim() !== 'null') 
+    ? String(rawId).trim() 
+    : '';
+
   const [fetchedOrder, setFetchedOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [callAlert, setCallAlert] = useState(false);
@@ -63,14 +80,12 @@ export default function OrderTracking({
   const [inputOtp, setInputOtp] = useState('');
 
   // 1. Search order across propOrder, fetchedOrder, myRequests, public requests, and localStorage
-  const searchId = String(orderId || '');
-  
   // Find in memory or local cache
   let matchedOrder = propOrder || fetchedOrder;
   if (!matchedOrder && searchId) {
     const memoryPool = [...(myRequests || []), ...(requests || [])];
     matchedOrder = memoryPool.find(r => {
-      const rId = String(r._id || r.id || '');
+      const rId = String(r._id || r.id || r.requestId || '');
       return rId === searchId || rId.endsWith(searchId);
     });
   }
@@ -80,7 +95,7 @@ export default function OrderTracking({
     try {
       const cached = JSON.parse(localStorage.getItem('raahi_my_requests') || '[]');
       matchedOrder = cached.find(r => {
-        const rId = String(r._id || r.id || '');
+        const rId = String(r._id || r.id || r.requestId || '');
         return rId === searchId || rId.endsWith(searchId);
       });
     } catch {}
@@ -88,7 +103,7 @@ export default function OrderTracking({
 
   // 2. If not found locally, attempt asynchronous backend API lookup
   useEffect(() => {
-    if (!matchedOrder && searchId && searchId !== 'undefined' && searchId !== 'null') {
+    if (!matchedOrder && searchId) {
       setLoading(true);
       apiClient.getRequestById(searchId)
         .then(res => {
@@ -119,6 +134,37 @@ export default function OrderTracking({
     );
   }
 
+  // Missing or Undefined ID State
+  if (!searchId) {
+    return (
+      <div className="p-8 sm:p-12 text-center bg-raahi-bg min-h-screen flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-card space-y-5 text-center">
+          <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border border-amber-200">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-slate-900">Missing Request ID</h3>
+            <p className="text-xs text-slate-500">
+              No valid errand tracking identifier was provided. Please check your request confirmation or navigate from your dashboard.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 pt-2">
+            <PrimaryButton onClick={onBack}>Return to Dashboard</PrimaryButton>
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate('customer-requests')}
+                className="text-xs font-bold text-raahi-teal hover:underline py-1.5"
+              >
+                View My Requests
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Missing order state
   if (!activeOrder) {
     return (
@@ -130,7 +176,7 @@ export default function OrderTracking({
           <div className="space-y-1">
             <h3 className="text-lg font-bold text-slate-900">Order Not Found</h3>
             <p className="text-xs text-slate-500">
-              We could not find an active errand matching ID <span className="font-mono text-slate-800 font-bold">{orderId || 'N/A'}</span>.
+              We could not find an active errand matching ID <span className="font-mono text-slate-800 font-bold">{searchId}</span>.
             </p>
           </div>
           <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-left text-xs text-slate-600 space-y-1">

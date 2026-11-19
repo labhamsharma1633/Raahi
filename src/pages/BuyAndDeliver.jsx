@@ -78,8 +78,11 @@ export default function BuyAndDeliver({
         notes: notes,
       });
 
-      if (newReq) {
+      const validId = newReq?._id || newReq?.id || newReq?.requestId;
+      if (newReq && validId) {
         setCreatedRequest(newReq);
+      } else {
+        throw new Error('Failed to create request: no valid request identifier returned');
       }
     } catch (err) {
       setErrorMessage(err.message || 'Failed to broadcast errand. Please check all required fields.');
@@ -146,7 +149,12 @@ export default function BuyAndDeliver({
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <PrimaryButton 
-                onClick={() => onNavigate(`tracking-${createdRequest._id || createdRequest.id}`)} 
+                onClick={() => {
+                  const targetId = createdRequest?._id || createdRequest?.id || createdRequest?.requestId;
+                  if (targetId) {
+                    onNavigate(`tracking-${targetId}`);
+                  }
+                }} 
                 variant="primary" 
                 size="md"
               >

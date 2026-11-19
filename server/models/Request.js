@@ -123,6 +123,15 @@ const requestSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        ret.id = ret._id ? ret._id.toString() : '';
+        ret.requestId = ret._id ? ret._id.toString() : '';
+        return ret;
+      },
+    },
+    toObject: { virtuals: true },
   }
 );
 

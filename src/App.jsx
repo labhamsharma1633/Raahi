@@ -1,4 +1,5 @@
-import React, { useState, Component } from 'react';
+import React, { useState, useEffect, Component } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { RaahiProvider, useRaahi } from './context/RaahiContext';
 import AppHeader from './components/AppHeader';
 import AppFooter from './components/AppFooter';
@@ -77,12 +78,65 @@ import SettingsPage from './pages/shared/SettingsPage';
 import SupportPage from './pages/shared/SupportPage';
 
 function AppContent() {
-  const [currentScreen, setCurrentScreen] = useState('home');
+  const getInitialScreen = () => {
+    if (typeof window !== 'undefined' && window.location.pathname) {
+      const path = window.location.pathname;
+      if (path.startsWith('/tracking/')) {
+        const id = path.replace('/tracking/', '');
+        return id && id !== 'undefined' ? `tracking-${id}` : 'home';
+      }
+      if (path.startsWith('/request-details/')) {
+        const id = path.replace('/request-details/', '');
+        return id && id !== 'undefined' ? `request-details-${id}` : 'home';
+      }
+      const clean = path.replace(/^\//, '');
+      if (clean) return clean;
+    }
+    return 'home';
+  };
+
+  const [currentScreen, setCurrentScreen] = useState(getInitialScreen);
   const { user, authLoading, toast, setToast } = useRaahi();
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/tracking/')) {
+        const id = path.replace('/tracking/', '');
+        setCurrentScreen(id && id !== 'undefined' ? `tracking-${id}` : 'home');
+      } else if (path.startsWith('/request-details/')) {
+        const id = path.replace('/request-details/', '');
+        setCurrentScreen(id && id !== 'undefined' ? `request-details-${id}` : 'home');
+      } else {
+        const clean = path.replace(/^\//, '');
+        setCurrentScreen(clean || 'home');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handleNavigate = (screenId) => {
     setCurrentScreen(screenId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (typeof window !== 'undefined' && window.history?.pushState) {
+      if (screenId.startsWith('tracking-')) {
+        const id = screenId.replace('tracking-', '');
+        if (id && id !== 'undefined') {
+          window.history.pushState({}, '', `/tracking/${id}`);
+        }
+      } else if (screenId.startsWith('request-details-')) {
+        const id = screenId.replace('request-details-', '');
+        if (id && id !== 'undefined') {
+          window.history.pushState({}, '', `/request-details/${id}`);
+        }
+      } else if (screenId === 'home') {
+        window.history.pushState({}, '', '/');
+      } else {
+        window.history.pushState({}, '', `/${screenId}`);
+      }
+    }
   };
 
   // Route resolver helper
@@ -95,21 +149,25 @@ function AppContent() {
     // Dynamic Request Details Route
     if (currentScreen.startsWith('request-details-')) {
       const reqId = currentScreen.replace('request-details-', '');
+      const cleanReqId = (reqId === 'undefined' || reqId === 'null') ? '' : reqId;
       return (
         <RequestDetails
-          requestId={reqId}
+          requestId={cleanReqId}
           onBack={() => handleNavigate('home')}
           onNavigate={handleNavigate}
         />
       );
     }
 
-    // Dynamic Live Tracking Route
-    if (currentScreen.startsWith('tracking-')) {
-      const orderId = currentScreen.replace('tracking-', '');
+    // Dynamic Live Tracking Route (supports both tracking-ID and tracking/ID)
+    if (currentScreen.startsWith('tracking-') || currentScreen.startsWith('tracking/')) {
+      const rawId = currentScreen.replace(/^tracking[-/]/, '');
+      const cleanId = (rawId === 'undefined' || rawId === 'null') ? '' : rawId;
       return (
         <OrderTracking
-          orderId={orderId}
+          orderId={cleanId}
+          id={cleanId}
+          requestId={cleanId}
           onBack={() => handleNavigate('customer-dashboard')}
           onNavigate={handleNavigate}
         />
@@ -215,8 +273,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <RaahiProvider>
-      <AppContent />
-    </RaahiProvider>
+    <BrowserRouter>
+      <RaahiProvider>
+        <AppContent />
+      </RaahiProvider>
+    </BrowserRouter>
   );
 }
