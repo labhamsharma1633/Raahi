@@ -1,0 +1,80 @@
+:root {
+  /* Raahi Visual Tokens - Design System based on Figma Prototype */
+  --raahi-bg: #EEF4F8;
+  --raahi-bg-subtle: #E2ECF2;
+  --raahi-surface: #FFFFFF;
+  --raahi-surface-hover: #F8FAFC;
+  
+  /* Brand Teal Palette */
+  --raahi-teal: #0D3B3E;
+  --raahi-teal-dark: #08282A;
+  --raahi-teal-light: #135155;
+  --raahi-teal-muted: #206368;
+  --raahi-teal-surface: #E8F3F4;
+  
+  /* Accent Colors */
+  --raahi-accent-teal: #0D9488;
+  --raahi-accent-mint: #14B8A6;
+  --raahi-accent-amber: #D97706;
+  --raahi-accent-amber-light: #FEF3C7;
+  --raahi-accent-coral: #E11D48;
+  --raahi-success: #15803D;
+  --raahi-success-bg: #DCFCE7;
+  
+  /* Typography Colors */
+  --raahi-text-main: #0F172A;
+  --raahi-text-sub: #475569;
+  --raahi-text-muted: #64748B;
+  --raahi-text-light: #F8FAFC;
+  --raahi-text-teal-light: #CCECED;
+  
+  /* Border & Dividers */
+  --raahi-border: #D8E5EE;
+  --raahi-border-light: #EAF0F4;
+  --raahi-border-dark: #225154;
+
+  /* Border Radii */
+  --raahi-radius-sm: 8px;
+  --raahi-radius-md: 12px;
+  --raahi-radius-lg: 16px;
+  --raahi-radius-xl: 20px;
+  --raahi-radius-2xl: 24px;
+  --raahi-radius-full: 9999px;
+
+  /* Shadows */
+  --raahi-shadow-sm: 0 1px 3px rgba(13, 59, 62, 0.05);
+  --raahi-shadow-md: 0 4px 14px rgba(13, 59, 62, 0.07);
+  --raahi-shadow-lg: 0 10px 25px rgba(13, 59, 62, 0.1);
+  --raahi-shadow-hero: 0 20px 40px -10px rgba(13, 59, 62, 0.35);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: var(--raahi-bg);
+    color: var(--raahi-text-main);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Custom utility classes */
+.raahi-mobile-shell {
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  background-color: var(--raahi-bg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  .raahi-mobile-shell {
+    box-shadow: 0 25px 60px -15px rgba(13, 59, 62, 0.15), 0 0 0 1px rgba(13, 59, 62, 0.05);
+  }
+}
