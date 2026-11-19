@@ -48,6 +48,43 @@ const userSchema = new mongoose.Schema(
       enum: ['customer', 'traveller'],
       default: 'customer',
     },
+    // --- DUAL-NETWORK MEMBERSHIPS (One Account, Two Networks) ---
+    activeNetworkPreference: {
+      type: String,
+      enum: ['campus', 'community'],
+      default: 'community',
+    },
+    phoneVerification: {
+      status: {
+        type: String,
+        enum: ['unverified', 'pending', 'verified'],
+        default: 'unverified',
+      },
+      verifiedAt: { type: Date, default: null },
+    },
+    campusMembership: {
+      enrolled: { type: Boolean, default: false },
+      collegeName: { type: String, default: '', trim: true },
+      campusId: { type: String, default: '', trim: true },
+      institutionalEmail: { type: String, default: '', trim: true, lowercase: true },
+      eligibilityStatus: {
+        type: String,
+        enum: ['not_requested', 'pending', 'verified', 'rejected'],
+        default: 'not_requested',
+      },
+      verifiedAt: { type: Date, default: null },
+    },
+    communityMembership: {
+      enrolled: { type: Boolean, default: true },
+      city: { type: String, default: '', trim: true },
+      state: { type: String, default: '', trim: true },
+      identityStatus: {
+        type: String,
+        enum: ['not_requested', 'pending', 'verified', 'rejected'],
+        default: 'not_requested',
+      },
+      verifiedAt: { type: Date, default: null },
+    },
     rating: {
       type: Number,
       default: 5.0,

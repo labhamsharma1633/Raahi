@@ -16,7 +16,9 @@ import {
   Activity,
   LogOut,
   LogIn,
-  ChevronDown
+  ChevronDown,
+  GraduationCap,
+  Globe
 } from 'lucide-react';
 import { useRaahi } from '../context/RaahiContext';
 
@@ -26,9 +28,40 @@ export default function AppHeader({
   campus = "India-Wide Network",
   locationName = "All States & Cities"
 }) {
-  const { user, currentRole, setRole, logoutUser, unreadNotificationCount } = useRaahi();
+  const { 
+    user, 
+    currentRole, 
+    setRole, 
+    logoutUser, 
+    unreadNotificationCount,
+    activeNetwork,
+    switchNetwork,
+    enrollCampus,
+    isCampusEnrolled,
+    campusInfo
+  } = useRaahi();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [collegeInput, setCollegeInput] = useState('');
+  const [instEmailInput, setInstEmailInput] = useState('');
+  const [enrolling, setEnrolling] = useState(false);
+
+  const handleEnrollSubmit = async (e) => {
+    e.preventDefault();
+    if (!collegeInput.trim()) return;
+    setEnrolling(true);
+    try {
+      await enrollCampus(collegeInput.trim(), instEmailInput.trim());
+      setEnrollModalOpen(false);
+      setCollegeInput('');
+      setInstEmailInput('');
+    } catch (err) {
+      // Error is handled in context toast
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   const isCustomer = currentRole === 'customer';
 
@@ -54,17 +87,57 @@ export default function AppHeader({
 
   return (
     <header className="w-full bg-raahi-teal text-white sticky top-0 z-40 shadow-md border-b border-[#14474B]">
-      {/* Top Utility Bar */}
+      {/* Top Utility Bar with Dual-Network Switcher */}
       <div className="bg-[#072426] border-b border-[#0F3538] text-xs py-1.5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-teal-200/90 font-medium">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Dual Network Switcher Toggle Pill */}
+            <div className="flex items-center bg-[#051C1E] p-0.5 rounded-xl border border-teal-500/30 text-[11px]">
+              <button
+                onClick={() => switchNetwork('community')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  activeNetwork === 'community'
+                    ? 'bg-teal-500 text-slate-950 shadow-sm'
+                    : 'text-teal-300 hover:text-white'
+                }`}
+                title="Public India-Wide Network"
+              >
+                <Globe className="w-3 h-3" />
+                <span>Community</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (isCampusEnrolled) {
+                    switchNetwork('campus');
+                  } else {
+                    setEnrollModalOpen(true);
+                  }
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  activeNetwork === 'campus'
+                    ? 'bg-amber-400 text-slate-950 shadow-sm'
+                    : 'text-teal-300 hover:text-white'
+                }`}
+                title={isCampusEnrolled ? `Campus Network (${campusInfo?.collegeName})` : 'Join your College Campus'}
+              >
+                <GraduationCap className="w-3 h-3" />
+                <span>Campus</span>
+                {!isCampusEnrolled && (
+                  <span className="text-[9px] bg-teal-800 text-teal-200 px-1 rounded ml-0.5">Join</span>
+                )}
+              </button>
+            </div>
+
+            <span className="hidden sm:inline-block text-teal-500">•</span>
+            <span className="flex items-center gap-1.5 text-teal-200/90 font-medium truncate max-w-[200px] sm:max-w-none">
               <MapPin className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-              <span>Community Network:</span>
-              <strong className="text-white">{user?.city ? `${user.city}` : campus}</strong>
+              <span>Network:</span>
+              <strong className="text-white">
+                {activeNetwork === 'campus' && campusInfo?.collegeName
+                  ? `${campusInfo.collegeName} (Campus)`
+                  : `${user?.city || 'India-Wide'}`}
+              </strong>
             </span>
-            <span className="hidden md:inline-block text-teal-500">•</span>
-            <span className="hidden md:inline-block text-teal-300/80">Active Zone: <strong>{locationName}</strong></span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -74,7 +147,7 @@ export default function AppHeader({
             </span>
             <span className="text-teal-400/50 hidden sm:inline">|</span>
             <span className="text-[11px] text-teal-200/70 hidden sm:inline">
-              Commute expense offset model • Zero surge pricing
+              Commute expense offset model • One Account, Two Networks
             </span>
           </div>
         </div>
@@ -280,6 +353,105 @@ export default function AppHeader({
           </div>
         </div>
       </div>
+
+      {/* Join Campus Network Modal (One Account, Two Networks) */}
+      {enrollModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 text-slate-800">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Join Raahi Campus</h3>
+                  <p className="text-xs text-slate-500">Connect with peers at your college</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEnrollModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!user ? (
+              <div className="space-y-4 text-center py-4">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  You need a Raahi account to access your campus network. One account gives you access to both Campus and Community!
+                </p>
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setEnrollModalOpen(false);
+                      handleNavClick('login');
+                    }}
+                    className="text-xs font-bold px-4 py-2 text-raahi-teal hover:underline"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEnrollModalOpen(false);
+                      handleNavClick('register');
+                    }}
+                    className="bg-raahi-teal text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-[#072426]"
+                  >
+                    Register Account
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleEnrollSubmit} className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-bold text-slate-700">College / University Name</label>
+                  <input
+                    type="text"
+                    value={collegeInput}
+                    onChange={(e) => setCollegeInput(e.target.value)}
+                    required
+                    placeholder="e.g. St. Stephen's College, DU"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                  />
+                  <p className="text-[10px] text-slate-400">Enter your institution's name to discover campus peers.</p>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-bold text-slate-700">
+                    Institutional Email <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={instEmailInput}
+                    onChange={(e) => setInstEmailInput(e.target.value)}
+                    placeholder="e.g. yourname@college.edu.in"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                  />
+                  <p className="text-[10px] text-slate-400">Used for optional institutional eligibility verification.</p>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setEnrollModalOpen(false)}
+                    className="text-xs font-bold px-4 py-2 text-slate-500 hover:text-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={enrolling || !collegeInput.trim()}
+                    className="bg-raahi-teal hover:bg-[#072426] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-50"
+                  >
+                    {enrolling ? 'Enrolling...' : 'Join Campus Network'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

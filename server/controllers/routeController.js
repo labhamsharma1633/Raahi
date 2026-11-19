@@ -37,6 +37,23 @@ exports.createRoute = async (req, res, next) => {
     );
     const distanceKm = distMeters ? Math.round((distMeters / 1000) * 10) / 10 : 0;
 
+    // Determine network scope
+    let scope = (req.body.networkScope || req.user.activeNetworkPreference || 'COMMUNITY').toUpperCase();
+    let assignedCampusRef = req.body.campusRef || null;
+
+    if (scope === 'CAMPUS') {
+      if (!req.user.campusMembership?.enrolled) {
+        return res.status(403).json({
+          status: 'error',
+          code: 'CAMPUS_MEMBERSHIP_REQUIRED',
+          message: 'You must enroll in your campus before publishing campus-only routes',
+        });
+      }
+      assignedCampusRef = assignedCampusRef || req.user.campusMembership?.campusId || null;
+    } else {
+      scope = 'COMMUNITY';
+    }
+
     const route = await Route.create({
       traveller: req.user._id,
       origin,
@@ -50,6 +67,8 @@ exports.createRoute = async (req, res, next) => {
       maxDetourMeters: maxDetourMeters || 800,
       maxDetourMinutes: maxDetourMinutes || 15,
       availableCapacity: availableCapacity || 'Backpack (up to 3 kg)',
+      networkScope: scope,
+      campusRef: assignedCampusRef,
       active: true,
     });
 

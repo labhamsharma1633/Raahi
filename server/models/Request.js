@@ -78,6 +78,18 @@ const requestSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    networkScope: {
+      type: String,
+      enum: ['COMMUNITY', 'CAMPUS', 'ALL'],
+      default: 'COMMUNITY',
+      index: true,
+    },
+    campusRef: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
     status: {
       type: String,
       enum: [

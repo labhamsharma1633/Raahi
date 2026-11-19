@@ -19,6 +19,8 @@ exports.createRequest = async (req, res, next) => {
       rewardFee,
       neededBy,
       notes,
+      networkScope,
+      campusRef,
     } = req.body;
 
     if (!title || !storeOrPickup || !pickupLocation || !destination || !destinationLocation || !rewardFee) {
@@ -26,6 +28,23 @@ exports.createRequest = async (req, res, next) => {
         status: 'error',
         message: 'Please provide all required fields including locations and reward fee',
       });
+    }
+
+    // Determine network scope: if campus, enforce campus membership
+    let scope = (networkScope || req.user.activeNetworkPreference || 'COMMUNITY').toUpperCase();
+    let assignedCampusRef = campusRef || null;
+
+    if (scope === 'CAMPUS') {
+      if (!req.user.campusMembership?.enrolled) {
+        return res.status(403).json({
+          status: 'error',
+          code: 'CAMPUS_MEMBERSHIP_REQUIRED',
+          message: 'You must enroll in your campus before posting campus-only requests',
+        });
+      }
+      assignedCampusRef = assignedCampusRef || req.user.campusMembership?.campusId || null;
+    } else {
+      scope = 'COMMUNITY';
     }
 
     const request = await Request.create({
@@ -41,6 +60,8 @@ exports.createRequest = async (req, res, next) => {
       rewardFee,
       neededBy: neededBy || 'Within 1 hour',
       notes: notes || '',
+      networkScope: scope,
+      campusRef: assignedCampusRef,
     });
 
     // Increment requested errands counter on user profile
@@ -60,7 +81,7 @@ exports.createRequest = async (req, res, next) => {
 // @access  Public
 exports.getOpenRequests = async (req, res, next) => {
   try {
-    const { city, type } = req.query;
+    const { city, type, networkScope, campusRef } = req.query;
     const query = { status: 'OPEN' };
 
     if (city) {
@@ -68,6 +89,12 @@ exports.getOpenRequests = async (req, res, next) => {
     }
     if (type) {
       query.type = type;
+    }
+    if (networkScope) {
+      query.networkScope = networkScope.toUpperCase();
+    }
+    if (campusRef) {
+      query.campusRef = campusRef;
     }
 
     const requests = await Request.find(query)

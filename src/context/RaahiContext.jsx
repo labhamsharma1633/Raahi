@@ -10,6 +10,8 @@ export function RaahiProvider({ children }) {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [currentRole, setCurrentRole] = useState('customer');
+  // Dual-Network state: 'community' | 'campus'
+  const [activeNetwork, setActiveNetwork] = useState('community');
 
   // Requests: public open requests for feed, and user-specific requests
   const [requests, setRequests] = useState([]);
@@ -47,6 +49,7 @@ export function RaahiProvider({ children }) {
           const u = res.data.user;
           setUser(u);
           setCurrentRole(u.defaultRole || 'customer');
+          setActiveNetwork(u.activeNetworkPreference || 'community');
         } else {
           apiClient.setToken(null);
           setUser(null);
@@ -64,16 +67,17 @@ export function RaahiProvider({ children }) {
   }, []);
 
   // --- 2. LOAD DATA ACCORDING TO USER AUTHENTICATION ---
-  const refreshOpenRequests = useCallback(async () => {
+  const refreshOpenRequests = useCallback(async (scopeOverride) => {
     try {
-      const res = await apiClient.getOpenRequests();
+      const scope = (scopeOverride || activeNetwork).toUpperCase();
+      const res = await apiClient.getOpenRequests({ networkScope: scope });
       if (res?.data?.requests) {
         setRequests(res.data.requests);
       }
     } catch (err) {
       console.warn('Failed to fetch open requests:', err.message);
     }
-  }, []);
+  }, [activeNetwork]);
 
   const refreshUserData = useCallback(async () => {
     if (!user) {
@@ -118,12 +122,50 @@ export function RaahiProvider({ children }) {
     }
   }, [user, refreshOpenRequests, refreshUserData]);
 
-  // --- 3. AUTH METHODS ---
+  // --- 3. DUAL-NETWORK SWITCHING & AUTH METHODS ---
+  const switchNetwork = async (network) => {
+    if (!['campus', 'community'].includes(network)) return;
+    setActiveNetwork(network);
+
+    if (user) {
+      try {
+        const res = await apiClient.switchNetworkPreference(network);
+        if (res?.data?.user) {
+          setUser(res.data.user);
+          showToast(`Switched to Raahi ${network === 'campus' ? 'Campus' : 'Community'} Network`);
+          refreshOpenRequests(network);
+        }
+      } catch (err) {
+        showToast(err.message || 'Failed to switch network', 'error');
+        setActiveNetwork(user.activeNetworkPreference || 'community');
+      }
+    } else {
+      refreshOpenRequests(network);
+    }
+  };
+
+  const enrollCampus = async (collegeName, institutionalEmail) => {
+    try {
+      const res = await apiClient.enrollCampus(collegeName, institutionalEmail);
+      if (res?.data?.user) {
+        setUser(res.data.user);
+        setActiveNetwork('campus');
+        showToast(`Enrolled in ${collegeName} Campus Network!`);
+        refreshOpenRequests('campus');
+        return res.data.user;
+      }
+    } catch (err) {
+      showToast(err.message || 'Campus enrollment failed', 'error');
+      throw err;
+    }
+  };
+
   const registerUser = async (registrationData) => {
     const res = await apiClient.register(registrationData);
     if (res?.data?.user) {
       setUser(res.data.user);
       setCurrentRole(res.data.user.defaultRole || 'customer');
+      setActiveNetwork(res.data.user.activeNetworkPreference || 'community');
       showToast('Registration successful! Welcome to Raahi.');
       return res.data.user;
     }
@@ -135,6 +177,7 @@ export function RaahiProvider({ children }) {
     if (res?.data?.user) {
       setUser(res.data.user);
       setCurrentRole(res.data.user.defaultRole || 'customer');
+      setActiveNetwork(res.data.user.activeNetworkPreference || 'community');
       showToast(`Welcome back, ${res.data.user.name}!`);
       return res.data.user;
     }
@@ -165,9 +208,13 @@ export function RaahiProvider({ children }) {
     }
 
     try {
-      const res = await apiClient.createRequest(requestData);
+      const payload = {
+        ...requestData,
+        networkScope: (requestData.networkScope || activeNetwork).toUpperCase(),
+      };
+      const res = await apiClient.createRequest(payload);
       if (res?.data?.request) {
-        showToast(`Request "${res.data.request.title}" broadcasted to community travellers!`);
+        showToast(`Request "${res.data.request.title}" broadcasted to ${activeNetwork} travellers!`);
         await refreshUserData();
         await refreshOpenRequests();
         return res.data.request;
@@ -199,7 +246,11 @@ export function RaahiProvider({ children }) {
     }
 
     try {
-      const res = await apiClient.createRoute(routeData);
+      const payload = {
+        ...routeData,
+        networkScope: (routeData.networkScope || activeNetwork).toUpperCase(),
+      };
+      const res = await apiClient.createRoute(payload);
       if (res?.data?.route) {
         setActiveRouteState(res.data.route);
         showToast(`Journey published: ${res.data.route.origin} ➔ ${res.data.route.destination}`);
@@ -290,6 +341,13 @@ export function RaahiProvider({ children }) {
     return notifications.filter((n) => n.unread).length;
   }, [notifications]);
 
+  const isCampusEnrolled = Boolean(user?.campusMembership?.enrolled);
+  const isCampusEligible = Boolean(
+    user?.campusMembership?.enrolled &&
+      (user?.campusMembership?.eligibilityStatus === 'verified' || user?.campusMembership?.eligibilityStatus === 'pending')
+  );
+  const isCommunityEligible = Boolean(user?.communityMembership?.enrolled !== false);
+
   return (
     <RaahiContext.Provider
       value={{
@@ -301,6 +359,14 @@ export function RaahiProvider({ children }) {
         logoutUser,
         currentRole,
         setRole,
+        activeNetwork,
+        switchNetwork,
+        enrollCampus,
+        isCampusEnrolled,
+        isCampusEligible,
+        isCommunityEligible,
+        campusInfo: user?.campusMembership || null,
+        communityInfo: user?.communityMembership || null,
         requests,
         myRequests,
         createRequest,

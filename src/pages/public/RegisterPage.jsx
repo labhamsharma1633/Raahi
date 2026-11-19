@@ -8,7 +8,9 @@ import {
   Lock,
   ShieldCheck, 
   ShieldAlert, 
-  Info 
+  Info,
+  Globe,
+  GraduationCap
 } from 'lucide-react';
 import FormField from '../../components/FormField';
 import PrimaryButton from '../../components/PrimaryButton';
@@ -57,7 +59,14 @@ const INDIAN_STATES = [
 export default function RegisterPage({ onNavigate }) {
   const { registerUser, showToast } = useRaahi();
 
-  // Required Fields
+  // Dual-Network Onboarding Choice ('community' | 'campus')
+  const [networkChoice, setNetworkChoice] = useState('community');
+
+  // Campus-specific fields (when networkChoice === 'campus')
+  const [collegeName, setCollegeName] = useState('');
+  const [institutionalEmail, setInstitutionalEmail] = useState('');
+
+  // Required Shared Profile Fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
@@ -78,6 +87,12 @@ export default function RegisterPage({ onNavigate }) {
     setLoading(true);
     setErrorMessage('');
 
+    if (networkChoice === 'campus' && !collegeName.trim()) {
+      setErrorMessage('Please provide your college or university name for campus registration.');
+      setLoading(false);
+      return;
+    }
+
     // If email is not entered, construct an account identifier from phone
     const registrationEmail = email.trim() || `${phone.replace(/\D/g, '')}@raahi.in`;
 
@@ -88,8 +103,11 @@ export default function RegisterPage({ onNavigate }) {
         password: password,
         phone: phone.trim(),
         city: city.trim(),
-        college: `${city.trim()}, ${state}`,
+        state: state,
+        college: networkChoice === 'campus' ? collegeName.trim() : `${city.trim()}, ${state}`,
         defaultRole: role === 'traveller' ? 'traveller' : 'customer',
+        network: networkChoice,
+        institutionalEmail: networkChoice === 'campus' ? institutionalEmail.trim() : undefined,
       });
 
       // Redirect directly to the appropriate dashboard
@@ -132,6 +150,86 @@ export default function RegisterPage({ onNavigate }) {
           )}
 
           <form onSubmit={handleRegister} className="space-y-4">
+            {/* Network Onboarding Choice: Campus vs Community */}
+            <div className="space-y-2 pb-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Select Your Network Path
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNetworkChoice('community')}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    networkChoice === 'community'
+                      ? 'bg-teal-50 border-teal-500 shadow-sm ring-1 ring-teal-500/30'
+                      : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe className={`w-4 h-4 ${networkChoice === 'community' ? 'text-teal-700' : 'text-slate-400'}`} />
+                    <span className={`text-xs font-black ${networkChoice === 'community' ? 'text-teal-900' : 'text-slate-700'}`}>
+                      Community Member
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    India-wide network for commuters, residents & shopkeepers.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNetworkChoice('campus')}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    networkChoice === 'campus'
+                      ? 'bg-amber-50 border-amber-500 shadow-sm ring-1 ring-amber-500/30'
+                      : 'bg-white border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <GraduationCap className={`w-4 h-4 ${networkChoice === 'campus' ? 'text-amber-700' : 'text-slate-400'}`} />
+                    <span className={`text-xs font-black ${networkChoice === 'campus' ? 'text-amber-900' : 'text-slate-700'}`}>
+                      College Student
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Focused network around your college, campus gates & hostels.
+                  </p>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 flex items-center gap-1 pt-0.5">
+                <Info className="w-3 h-3 text-teal-600 shrink-0" />
+                <span>One shared account: Students can use both Campus and Community networks!</span>
+              </p>
+            </div>
+
+            {/* Campus Details (When College Student is chosen) */}
+            {networkChoice === 'campus' && (
+              <div className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-3 animate-fade-in">
+                <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
+                  Campus Affiliation
+                </span>
+                <FormField
+                  label="College / University Name"
+                  name="collegeName"
+                  value={collegeName}
+                  onChange={(e) => setCollegeName(e.target.value)}
+                  required
+                  placeholder="e.g. Miranda House / St. Stephen's College, DU"
+                  helperText="Used to connect you with peers at your campus"
+                />
+                <FormField
+                  label="Institutional Email (Optional)"
+                  name="institutionalEmail"
+                  type="email"
+                  value={institutionalEmail}
+                  onChange={(e) => setInstitutionalEmail(e.target.value)}
+                  icon={Mail}
+                  placeholder="e.g. yourname@college.edu.in"
+                  helperText="Optional for institutional eligibility verification"
+                />
+              </div>
+            )}
+
             {/* Full Name & Mobile Number */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField

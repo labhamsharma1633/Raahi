@@ -76,6 +76,18 @@ const routeSchema = new mongoose.Schema(
       type: String,
       default: 'Backpack (up to 3 kg)',
     },
+    networkScope: {
+      type: String,
+      enum: ['COMMUNITY', 'CAMPUS', 'ALL'],
+      default: 'COMMUNITY',
+      index: true,
+    },
+    campusRef: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
     active: {
       type: Boolean,
       default: true,

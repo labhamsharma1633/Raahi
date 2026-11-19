@@ -79,6 +79,20 @@ class ApiClient {
     return await this.request('/auth/me');
   }
 
+  async switchNetworkPreference(network) {
+    return await this.request('/auth/network-preference', {
+      method: 'PUT',
+      body: JSON.stringify({ network }),
+    });
+  }
+
+  async enrollCampus(collegeName, institutionalEmail) {
+    return await this.request('/auth/campus/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ collegeName, institutionalEmail }),
+    });
+  }
+
   // Request APIs
   async createRequest(requestData) {
     return await this.request('/requests', {
