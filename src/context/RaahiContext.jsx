@@ -1,233 +1,328 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { storageService, DEFAULT_USER } from '../services/storageService';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { apiClient } from '../services/apiClient';
 import { findMatchingRequests } from '../utils/routeMatchingEngine';
 import { REQUEST_STATUS } from '../utils/constants';
 
 const RaahiContext = createContext(null);
 
 export function RaahiProvider({ children }) {
-  const [user, setUser] = useState(() => storageService.getUser());
-  const [currentRole, setCurrentRole] = useState(() => storageService.getUser()?.role || 'customer');
-  const [requests, setRequests] = useState(() => storageService.getRequests());
-  const [routes, setRoutes] = useState(() => storageService.getRoutes());
-  const [activeRoute, setActiveRouteState] = useState(() => storageService.getActiveRoute());
-  const [earnings, setEarnings] = useState(() => storageService.getEarnings());
-  const [notifications, setNotifications] = useState(() => storageService.getNotifications());
-  const [activity, setActivity] = useState(() => storageService.getActivity());
+  // Real authenticated user state (null when not logged in)
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentRole, setCurrentRole] = useState('customer');
+
+  // Requests: public open requests for feed, and user-specific requests
+  const [requests, setRequests] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
+
+  // Traveller data
+  const [myRoutes, setMyRoutes] = useState([]);
+  const [activeRoute, setActiveRouteState] = useState(null);
+  const [activeDeliveries, setActiveDeliveries] = useState([]);
+  const [earningsData, setEarningsData] = useState({ totalEarned: 0, transactions: [] });
+
+  // Notifications & Toast
+  const [notifications, setNotifications] = useState([]);
   const [toast, setToast] = useState(null);
 
-  // Sync role to user
-  const setRole = (role) => {
-    setCurrentRole(role);
-    const updated = { ...user, role };
-    setUser(updated);
-    storageService.saveUser(updated);
-    showToast(`Switched to ${role === 'customer' ? 'Customer' : 'Traveller'} mode`, 'info');
-  };
-
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ id: Date.now(), message, type });
     setTimeout(() => {
       setToast(null);
     }, 3500);
-  };
+  }, []);
 
-  // --- CUSTOMER ACTIONS ---
-  const createRequest = (requestData) => {
-    const created = storageService.saveRequest({
-      ...requestData,
-      customer: {
-        name: user.name,
-        dept: user.college,
-        location: requestData.destination,
-        rating: user.rating,
-        phone: user.phone
+  // --- 1. INITIALIZE & RESTORE AUTHENTICATED SESSION ---
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = apiClient.getToken();
+      if (!token) {
+        setAuthLoading(false);
+        return;
       }
-    });
-    setRequests(storageService.getRequests());
-    setActivity(storageService.getActivity());
-    showToast(`Request "${created.title}" successfully broadcasted to campus travellers!`);
-    return created;
+
+      try {
+        const res = await apiClient.getMe();
+        if (res?.data?.user) {
+          const u = res.data.user;
+          setUser(u);
+          setCurrentRole(u.defaultRole || 'customer');
+        } else {
+          apiClient.setToken(null);
+          setUser(null);
+        }
+      } catch (err) {
+        console.warn('Session verification failed:', err.message);
+        apiClient.setToken(null);
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
+  // --- 2. LOAD DATA ACCORDING TO USER AUTHENTICATION ---
+  const refreshOpenRequests = useCallback(async () => {
+    try {
+      const res = await apiClient.getOpenRequests();
+      if (res?.data?.requests) {
+        setRequests(res.data.requests);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch open requests:', err.message);
+    }
+  }, []);
+
+  const refreshUserData = useCallback(async () => {
+    if (!user) {
+      setMyRequests([]);
+      setMyRoutes([]);
+      setActiveRouteState(null);
+      setActiveDeliveries([]);
+      setEarningsData({ totalEarned: 0, transactions: [] });
+      return;
+    }
+
+    try {
+      // 1. Fetch user's own requests
+      const reqRes = await apiClient.getMyRequests().catch(() => ({ data: { requests: [] } }));
+      setMyRequests(reqRes?.data?.requests || []);
+
+      // 2. Fetch user's published routes
+      const routesRes = await apiClient.getMyRoutes().catch(() => ({ data: { routes: [] } }));
+      const userRt = routesRes?.data?.routes || [];
+      setMyRoutes(userRt);
+      if (userRt.length > 0) {
+        const active = userRt.find((r) => r.active) || userRt[0];
+        setActiveRouteState(active);
+      }
+
+      // 3. Fetch active deliveries carried by user
+      const delivRes = await apiClient.getActiveDeliveries().catch(() => ({ data: { deliveries: [] } }));
+      setActiveDeliveries(delivRes?.data?.deliveries || []);
+
+      // 4. Fetch user's real earnings
+      const earnRes = await apiClient.getEarnings().catch(() => ({ data: { totalEarned: 0, transactions: [] } }));
+      setEarningsData(earnRes?.data || { totalEarned: 0, transactions: [] });
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    refreshOpenRequests();
+    if (user) {
+      refreshUserData();
+    }
+  }, [user, refreshOpenRequests, refreshUserData]);
+
+  // --- 3. AUTH METHODS ---
+  const registerUser = async (registrationData) => {
+    const res = await apiClient.register(registrationData);
+    if (res?.data?.user) {
+      setUser(res.data.user);
+      setCurrentRole(res.data.user.defaultRole || 'customer');
+      showToast('Registration successful! Welcome to Raahi.');
+      return res.data.user;
+    }
+    throw new Error('Registration failed');
   };
 
-  const cancelRequest = (requestId, reason) => {
-    const cancelled = storageService.cancelRequest(requestId, reason);
-    setRequests(storageService.getRequests());
-    setActivity(storageService.getActivity());
-    showToast(`Order ${requestId} cancelled.`, 'warning');
-    return cancelled;
+  const loginUser = async (email, password) => {
+    const res = await apiClient.login({ email, password });
+    if (res?.data?.user) {
+      setUser(res.data.user);
+      setCurrentRole(res.data.user.defaultRole || 'customer');
+      showToast(`Welcome back, ${res.data.user.name}!`);
+      return res.data.user;
+    }
+    throw new Error('Login failed');
   };
 
-  // --- TRAVELLER ACTIONS ---
-  const publishRoute = (routeData) => {
-    const published = storageService.saveRoute(routeData);
-    setRoutes(storageService.getRoutes());
-    setActiveRouteState(published);
-    setActivity(storageService.getActivity());
-    showToast(`Journey published: ${published.origin} ➔ ${published.destination}`);
-    return published;
+  const logoutUser = () => {
+    apiClient.setToken(null);
+    setUser(null);
+    setMyRequests([]);
+    setMyRoutes([]);
+    setActiveRouteState(null);
+    setActiveDeliveries([]);
+    setEarningsData({ totalEarned: 0, transactions: [] });
+    showToast('Logged out successfully', 'info');
+  };
+
+  const setRole = (role) => {
+    setCurrentRole(role);
+    showToast(`Switched to ${role === 'customer' ? 'Customer' : 'Traveller'} mode`, 'info');
+  };
+
+  // --- 4. CUSTOMER ACTIONS ---
+  const createRequest = async (requestData) => {
+    if (!user) {
+      showToast('Please sign in to post a request', 'error');
+      return null;
+    }
+
+    try {
+      const res = await apiClient.createRequest(requestData);
+      if (res?.data?.request) {
+        showToast(`Request "${res.data.request.title}" broadcasted to community travellers!`);
+        await refreshUserData();
+        await refreshOpenRequests();
+        return res.data.request;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to create request', 'error');
+      throw err;
+    }
+  };
+
+  const cancelRequest = async (requestId, reason) => {
+    try {
+      await apiClient.cancelRequest(requestId, reason);
+      showToast('Request cancelled successfully', 'info');
+      await refreshUserData();
+      await refreshOpenRequests();
+      return true;
+    } catch (err) {
+      showToast(err.message || 'Failed to cancel request', 'error');
+      return false;
+    }
+  };
+
+  // --- 5. TRAVELLER ACTIONS ---
+  const publishRoute = async (routeData) => {
+    if (!user) {
+      showToast('Please sign in to publish a route', 'error');
+      return null;
+    }
+
+    try {
+      const res = await apiClient.createRoute(routeData);
+      if (res?.data?.route) {
+        setActiveRouteState(res.data.route);
+        showToast(`Journey published: ${res.data.route.origin} ➔ ${res.data.route.destination}`);
+        await refreshUserData();
+        return res.data.route;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to publish route', 'error');
+      throw err;
+    }
   };
 
   const setActiveRoute = (route) => {
-    storageService.setActiveRoute(route);
     setActiveRouteState(route);
     showToast(`Active route set: ${route.origin} ➔ ${route.destination}`, 'info');
   };
 
-  const acceptRequest = (requestId) => {
-    // Check availability
-    const target = requests.find((r) => r.id === requestId);
-    if (!target) {
-      showToast('Request not found', 'error');
-      return false;
-    }
-    if (target.status !== REQUEST_STATUS.OPEN) {
-      showToast('This request is no longer available or was already accepted.', 'error');
+  const acceptRequest = async (requestId) => {
+    if (!user) {
+      showToast('Please sign in to accept delivery errands', 'error');
       return false;
     }
 
-    const updated = storageService.updateRequestStatus(requestId, REQUEST_STATUS.ACCEPTED, {
-      traveller: {
-        name: user.name,
-        dept: user.college,
-        rating: user.rating,
-        phone: user.phone
-      },
-      acceptedAt: new Date().toISOString()
-    });
-
-    setRequests(storageService.getRequests());
-    setActivity(storageService.getActivity());
-    setNotifications(storageService.getNotifications());
-    showToast(`Task accepted! +₹${updated.rewardFee} travel reward reserved.`);
-    return updated;
-  };
-
-  const advanceDeliveryStatus = (requestId, inputOtp) => {
-    const target = requests.find((r) => r.id === requestId);
-    if (!target) return null;
-
-    let nextStatus = target.status;
-    if (target.status === REQUEST_STATUS.ACCEPTED) {
-      nextStatus = REQUEST_STATUS.PICKED_UP;
-    } else if (target.status === REQUEST_STATUS.PICKED_UP) {
-      nextStatus = REQUEST_STATUS.IN_TRANSIT;
-    } else if (target.status === REQUEST_STATUS.IN_TRANSIT) {
-      // Optional OTP check verification
-      if (inputOtp && target.otp && inputOtp.trim() !== target.otp.trim()) {
-        showToast('Invalid verification OTP code. Please check with customer.', 'error');
-        return false;
+    try {
+      const res = await apiClient.acceptRequest(requestId);
+      if (res?.data?.request) {
+        showToast(res.message || 'Delivery accepted!');
+        await refreshUserData();
+        await refreshOpenRequests();
+        return res.data.request;
       }
-      nextStatus = REQUEST_STATUS.DELIVERED;
+    } catch (err) {
+      showToast(err.message || 'Failed to accept delivery', 'error');
+      return false;
     }
-
-    const updated = storageService.updateRequestStatus(requestId, nextStatus);
-    setRequests(storageService.getRequests());
-    setEarnings(storageService.getEarnings());
-    setActivity(storageService.getActivity());
-    setNotifications(storageService.getNotifications());
-
-    if (nextStatus === REQUEST_STATUS.DELIVERED) {
-      showToast(`Delivery completed! ₹${updated.rewardFee} credited to offset commute.`);
-    } else {
-      showToast(`Order status updated to ${nextStatus.replace('_', ' ')}.`);
-    }
-
-    return updated;
   };
 
-  const disputeDelivery = (requestId, reason) => {
-    const updated = storageService.updateRequestStatus(requestId, REQUEST_STATUS.DISPUTED, { disputeReason: reason });
-    setRequests(storageService.getRequests());
-    setActivity(storageService.getActivity());
-    showToast('Delivery marked for review by campus team.', 'warning');
-    return updated;
+  const advanceDeliveryStatus = async (requestId, inputOtp) => {
+    try {
+      const res = await apiClient.advanceDelivery(requestId, inputOtp);
+      if (res?.data?.request) {
+        showToast(res.message || 'Delivery updated');
+        await refreshUserData();
+        await refreshOpenRequests();
+        return res.data.request;
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to update delivery status', 'error');
+      return false;
+    }
   };
 
-  // --- DYNAMIC ROUTE MATCHES ---
+  // --- 6. DYNAMIC ROUTE MATCHES ---
   const matchingRequests = useMemo(() => {
     return findMatchingRequests(activeRoute, requests);
   }, [activeRoute, requests]);
 
-  // --- METRICS & STATS ---
+  // --- 7. METRICS & STATS (DERIVED STRICTLY FROM USER'S REAL DB RECORDS) ---
   const customerStats = useMemo(() => {
-    const active = requests.filter((r) => [REQUEST_STATUS.OPEN, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status));
-    const awaiting = requests.filter((r) => r.status === REQUEST_STATUS.OPEN);
-    const inProgress = requests.filter((r) => [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status));
-    const completed = requests.filter((r) => r.status === REQUEST_STATUS.DELIVERED);
-    const cancelled = requests.filter((r) => r.status === REQUEST_STATUS.CANCELLED);
-    return { activeCount: active.length, awaitingCount: awaiting.length, inProgressCount: inProgress.length, completedCount: completed.length, cancelledCount: cancelled.length };
-  }, [requests]);
+    const active = myRequests.filter((r) =>
+      [REQUEST_STATUS.OPEN, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status)
+    );
+    const awaiting = myRequests.filter((r) => r.status === REQUEST_STATUS.OPEN);
+    const inProgress = myRequests.filter((r) =>
+      [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status)
+    );
+    const completed = myRequests.filter((r) => r.status === REQUEST_STATUS.DELIVERED);
+    const cancelled = myRequests.filter((r) => r.status === REQUEST_STATUS.CANCELLED);
+
+    return {
+      activeCount: active.length,
+      awaitingCount: awaiting.length,
+      inProgressCount: inProgress.length,
+      completedCount: completed.length,
+      cancelledCount: cancelled.length,
+    };
+  }, [myRequests]);
 
   const travellerStats = useMemo(() => {
-    const activeDeliveries = requests.filter((r) => [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status) && r.traveller?.name === user.name);
-    const completedDeliveries = requests.filter((r) => r.status === REQUEST_STATUS.DELIVERED && r.traveller?.name === user.name);
-    const totalEarned = earnings.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    return { activeDeliveriesCount: activeDeliveries.length, completedDeliveriesCount: completedDeliveries.length, totalEarned };
-  }, [requests, earnings, user.name]);
+    return {
+      activeDeliveriesCount: activeDeliveries.length,
+      completedDeliveriesCount: user?.completedDeliveries || 0,
+      totalEarned: earningsData.totalEarned || 0,
+    };
+  }, [activeDeliveries, user, earningsData]);
 
   const unreadNotificationCount = useMemo(() => {
     return notifications.filter((n) => n.unread).length;
   }, [notifications]);
-
-  const markNotificationsRead = () => {
-    storageService.markAllNotificationsRead();
-    setNotifications(storageService.getNotifications());
-  };
-
-  const resetSampleData = () => {
-    storageService.resetToSampleData();
-    setUser(storageService.getUser());
-    setRequests(storageService.getRequests());
-    setRoutes(storageService.getRoutes());
-    setActiveRouteState(storageService.getActiveRoute());
-    setEarnings(storageService.getEarnings());
-    setNotifications(storageService.getNotifications());
-    setActivity(storageService.getActivity());
-    showToast('Sample campus data loaded successfully.', 'info');
-  };
-
-  const clearData = () => {
-    storageService.clearAllData();
-    setUser(DEFAULT_USER);
-    setRequests([]);
-    setRoutes([]);
-    setActiveRouteState(null);
-    setEarnings([]);
-    setNotifications([]);
-    setActivity([]);
-    showToast('Local application storage cleared.', 'warning');
-  };
 
   return (
     <RaahiContext.Provider
       value={{
         user,
         setUser,
+        authLoading,
+        registerUser,
+        loginUser,
+        logoutUser,
         currentRole,
         setRole,
         requests,
+        myRequests,
         createRequest,
         cancelRequest,
-        routes,
+        myRoutes,
         activeRoute,
         publishRoute,
         setActiveRoute,
+        activeDeliveries,
         acceptRequest,
         advanceDeliveryStatus,
-        disputeDelivery,
         matchingRequests,
-        earnings,
+        earnings: earningsData.transactions || [],
+        earningsData,
         notifications,
         unreadNotificationCount,
-        markNotificationsRead,
-        activity,
         customerStats,
         travellerStats,
         toast,
         showToast,
-        resetSampleData,
-        clearData
+        refreshUserData,
+        refreshOpenRequests,
       }}
     >
       {children}

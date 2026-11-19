@@ -27,17 +27,11 @@ export default function TravellerDashboard({ onNavigate }) {
     setRole, 
     activeRoute, 
     matchingRequests, 
-    requests, 
+    activeDeliveries, 
     travellerStats, 
     acceptRequest, 
     advanceDeliveryStatus 
   } = useRaahi();
-
-  // Active deliveries being executed by this traveller
-  const activeDeliveries = requests.filter(r => 
-    [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status) &&
-    (r.traveller?.name === user.name || r.status !== REQUEST_STATUS.OPEN)
-  );
 
   return (
     <div className="pb-16 bg-raahi-bg min-h-screen">

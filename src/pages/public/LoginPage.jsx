@@ -1,61 +1,31 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Lock, Mail, ShieldCheck, Footprints, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Lock, Mail } from 'lucide-react';
 import FormField from '../../components/FormField';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useRaahi } from '../../context/RaahiContext';
 
 export default function LoginPage({ onNavigate }) {
-  const { setUser, setRole, showToast } = useRaahi();
-  const [email, setEmail] = useState('sameer.gautam@kmc.du.ac.in');
-  const [password, setPassword] = useState('password123');
-  const [preferredRole, setPreferredRole] = useState('customer');
+  const { loginUser, showToast } = useRaahi();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage('');
 
-    setTimeout(() => {
+    try {
+      const loggedIn = await loginUser(email.trim(), password);
+      // Navigate to the user's active dashboard
+      onNavigate(loggedIn.defaultRole === 'traveller' ? 'traveller-dashboard' : 'customer-dashboard');
+    } catch (err) {
+      setErrorMessage(err.message || 'Invalid email or password. Please try again.');
+      showToast(err.message || 'Login failed', 'error');
+    } finally {
       setLoading(false);
-      const loggedInUser = {
-        id: 'USR-' + Math.floor(100 + Math.random() * 900),
-        name: email.includes('aarav') ? 'Aarav Gupta' : 'Sameer Gautam',
-        email: email,
-        college: 'Kirori Mal College, Delhi University',
-        rollNo: '22/ECO/104',
-        role: preferredRole,
-        verified: true,
-        rating: 4.92,
-        completedDeliveries: 11,
-        requestedErrands: 7
-      };
-
-      setUser(loggedInUser);
-      setRole(preferredRole);
-      showToast(`Welcome back, ${loggedInUser.name}!`);
-      onNavigate(preferredRole === 'customer' ? 'customer-dashboard' : 'traveller-dashboard');
-    }, 600);
-  };
-
-  const handleQuickDemo = (role, demoEmail, demoName) => {
-    setEmail(demoEmail);
-    setPreferredRole(role);
-    const demoUser = {
-      id: 'USR-DEMO-' + role.toUpperCase(),
-      name: demoName,
-      email: demoEmail,
-      college: 'Delhi University — North Campus',
-      rollNo: '22/DU/401',
-      role: role,
-      verified: true,
-      rating: 4.95,
-      completedDeliveries: role === 'traveller' ? 14 : 2,
-      requestedErrands: role === 'customer' ? 9 : 1
-    };
-    setUser(demoUser);
-    setRole(role);
-    showToast(`Logged in as ${demoName} (${role.toUpperCase()})`);
-    onNavigate(role === 'customer' ? 'customer-dashboard' : 'traveller-dashboard');
+    }
   };
 
   return (
@@ -63,7 +33,7 @@ export default function LoginPage({ onNavigate }) {
       <div className="max-w-md w-full space-y-6">
         <button
           onClick={() => onNavigate('home')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
@@ -76,20 +46,26 @@ export default function LoginPage({ onNavigate }) {
             </div>
             <h2 className="text-2xl font-black text-slate-900">Sign in to Raahi</h2>
             <p className="text-xs text-slate-500">
-              Campus community delivery and commute reimbursement network
+              India-wide route delivery and commute reimbursement network
             </p>
           </div>
 
+          {errorMessage && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs font-medium">
+              {errorMessage}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <FormField
-              label="Campus Institutional Email / Username"
+              label="Email Address or Mobile ID"
               name="email"
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               icon={Mail}
               required
-              placeholder="name@college.du.ac.in"
+              placeholder="e.g. yourname@example.com"
             />
 
             <FormField
@@ -100,40 +76,8 @@ export default function LoginPage({ onNavigate }) {
               onChange={(e) => setPassword(e.target.value)}
               icon={Lock}
               required
-              placeholder="••••••••"
+              placeholder="Enter your password"
             />
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Default Mode Upon Login
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPreferredRole('customer')}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    preferredRole === 'customer'
-                      ? 'bg-teal-50 border-raahi-teal text-raahi-teal'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>Customer</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreferredRole('traveller')}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    preferredRole === 'traveller'
-                      ? 'bg-amber-50 border-amber-500 text-amber-900'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Footprints className="w-3.5 h-3.5" />
-                  <span>Traveller</span>
-                </button>
-              </div>
-            </div>
 
             <div className="pt-2">
               <PrimaryButton type="submit" variant="primary" size="lg" loading={loading}>
@@ -142,39 +86,14 @@ export default function LoginPage({ onNavigate }) {
             </div>
           </form>
 
-          {/* Quick Demo Presets */}
-          <div className="pt-4 border-t border-slate-100 space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block text-center">
-              Quick 1-Click Demo Profiles
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('customer', 'sameer.gautam@kmc.du.ac.in', 'Sameer Gautam')}
-                className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 text-[11px] font-semibold text-slate-700 text-left transition-colors"
-              >
-                <strong>Sameer (Customer)</strong>
-                <span className="block text-slate-400 text-[10px]">Hostel Errand Requester</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('traveller', 'aarav.gupta@physics.du.ac.in', 'Aarav Gupta')}
-                className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 text-[11px] font-semibold text-slate-700 text-left transition-colors"
-              >
-                <strong>Aarav (Traveller)</strong>
-                <span className="block text-slate-400 text-[10px]">Daily Campus Commuter</span>
-              </button>
-            </div>
-          </div>
-
           <div className="text-center pt-2">
             <p className="text-xs text-slate-500">
-              Don't have a verified campus profile?{' '}
+              Don't have a Raahi account yet?{' '}
               <button
                 onClick={() => onNavigate('register')}
                 className="font-bold text-raahi-teal hover:underline"
               >
-                Register Here
+                Create Account
               </button>
             </p>
           </div>

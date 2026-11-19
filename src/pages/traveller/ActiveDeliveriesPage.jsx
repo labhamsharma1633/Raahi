@@ -25,7 +25,7 @@ export default function ActiveDeliveriesPage({ onNavigate }) {
     user, 
     currentRole, 
     setRole, 
-    requests, 
+    activeDeliveries, 
     advanceDeliveryStatus, 
     disputeDelivery, 
     cancelRequest, 
@@ -36,11 +36,6 @@ export default function ActiveDeliveriesPage({ onNavigate }) {
   const [disputeModalOpen, setDisputeModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [activeReqId, setActiveReqId] = useState(null);
-
-  // Active deliveries being handled by traveller
-  const activeDeliveries = requests.filter(r => 
-    [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status)
-  );
 
   const handleOtpChange = (reqId, val) => {
     setOtpInputs(prev => ({ ...prev, [reqId]: val }));

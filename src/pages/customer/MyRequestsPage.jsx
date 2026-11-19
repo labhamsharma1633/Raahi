@@ -21,7 +21,7 @@ export default function MyRequestsPage({ onNavigate }) {
   const { 
     currentRole, 
     setRole, 
-    requests, 
+    myRequests, 
     cancelRequest 
   } = useRaahi();
 
@@ -30,7 +30,7 @@ export default function MyRequestsPage({ onNavigate }) {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedReqForCancel, setSelectedReqForCancel] = useState(null);
 
-  const filtered = requests.filter((r) => {
+  const filtered = (myRequests || []).filter((r) => {
     let matchesTab = true;
     if (activeTab === 'awaiting') matchesTab = r.status === REQUEST_STATUS.OPEN;
     else if (activeTab === 'in-progress') matchesTab = [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status);

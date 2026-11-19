@@ -26,7 +26,7 @@ export default function CustomerDashboard({ onNavigate }) {
     user, 
     currentRole, 
     setRole, 
-    requests, 
+    myRequests, 
     customerStats, 
     cancelRequest, 
     advanceDeliveryStatus 
@@ -36,7 +36,7 @@ export default function CustomerDashboard({ onNavigate }) {
   const [selectedReqForCancel, setSelectedReqForCancel] = useState(null);
 
   // Active requests for this customer
-  const activeRequests = requests.filter(r => 
+  const activeRequests = (myRequests || []).filter(r => 
     [REQUEST_STATUS.OPEN, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.PICKED_UP, REQUEST_STATUS.IN_TRANSIT].includes(r.status)
   );
 
