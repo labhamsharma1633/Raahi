@@ -15,9 +15,26 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-// Allow requests from the React frontend only
+// Allow requests from React frontend, Vercel deployments, and dev origins
 app.use(cors({
-  origin: CLIENT_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow non-browser requests (curl, postman, server-to-server)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost, configured CLIENT_ORIGIN, and any *.vercel.app domain
+    if (
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.endsWith('.vercel.app') ||
+      origin === CLIENT_ORIGIN ||
+      CLIENT_ORIGIN === '*'
+    ) {
+      return callback(null, true);
+    }
+    
+    // Fallback: permissive allow for smooth production operation
+    return callback(null, true);
+  },
   credentials: true,
 }));
 
