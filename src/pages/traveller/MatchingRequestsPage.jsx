@@ -159,18 +159,21 @@ export default function MatchingRequestsPage({ onNavigate }) {
             {/* Matching Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filtered.length > 0 ? (
-                filtered.map((req) => (
-                  <RequestCard
-                    key={req.id}
-                    request={req}
-                    isTravellerView={true}
-                    onSelect={(r) => onNavigate(`request-details-${r.id}`)}
-                    onAccept={(r) => {
-                      const res = acceptRequest(r.id);
-                      if (res) onNavigate('traveller-active');
-                    }}
-                  />
-                ))
+                filtered.map((req) => {
+                  const reqId = req._id || req.id || req.requestId;
+                  return (
+                    <RequestCard
+                      key={reqId}
+                      request={req}
+                      isTravellerView={true}
+                      onSelect={() => onNavigate(`request-details-${reqId}`)}
+                      onAccept={async () => {
+                        const res = await acceptRequest(reqId);
+                        if (res) onNavigate('traveller-active');
+                      }}
+                    />
+                  );
+                })
               ) : (
                 <div className="col-span-full py-16 bg-white rounded-3xl p-8 text-center border border-dashed border-slate-300">
                   <Compass className="w-12 h-12 text-slate-300 mx-auto mb-3" />

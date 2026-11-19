@@ -1,4 +1,5 @@
 // Deliveries & Status Lifecycle Controller
+const mongoose = require('mongoose');
 const Request = require('../models/Request');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
@@ -9,6 +10,13 @@ const Transaction = require('../models/Transaction');
 exports.acceptRequest = async (req, res, next) => {
   try {
     const requestId = req.params.id;
+
+    if (!requestId || requestId === 'undefined' || !mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid or missing request identifier',
+      });
+    }
 
     // Concurrency safe: only update if status is still strictly OPEN
     const request = await Request.findOneAndUpdate(
@@ -46,7 +54,16 @@ exports.acceptRequest = async (req, res, next) => {
 exports.advanceDelivery = async (req, res, next) => {
   try {
     const { otp } = req.body;
-    const request = await Request.findById(req.params.id);
+    const requestId = req.params.id;
+
+    if (!requestId || requestId === 'undefined' || !mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid or missing request identifier',
+      });
+    }
+
+    const request = await Request.findById(requestId);
 
     if (!request) {
       return res.status(404).json({

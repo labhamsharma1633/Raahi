@@ -72,7 +72,17 @@ export function RaahiProvider({ children }) {
       const scope = (scopeOverride || activeNetwork).toUpperCase();
       const res = await apiClient.getOpenRequests({ networkScope: scope });
       if (res?.data?.requests) {
-        setRequests(res.data.requests);
+        const normalized = res.data.requests.map((r) => {
+          const canonicalId = String(r._id || r.id || r.requestId || '');
+          return {
+            ...r,
+            _id: canonicalId,
+            id: canonicalId,
+            requestId: canonicalId,
+            orderId: canonicalId,
+          };
+        });
+        setRequests(normalized);
       }
     } catch (err) {
       console.warn('Failed to fetch open requests:', err.message);
@@ -107,7 +117,17 @@ export function RaahiProvider({ children }) {
     try {
       // 1. Fetch user's own requests from MongoDB
       const reqRes = await apiClient.getMyRequests().catch(() => ({ data: { requests: [] } }));
-      const dbReqs = reqRes?.data?.requests || [];
+      const rawDbReqs = reqRes?.data?.requests || [];
+      const dbReqs = rawDbReqs.map((r) => {
+        const canonicalId = String(r._id || r.id || r.requestId || '');
+        return {
+          ...r,
+          _id: canonicalId,
+          id: canonicalId,
+          requestId: canonicalId,
+          orderId: canonicalId,
+        };
+      });
 
       // Combine with local cache to avoid losing recent creations
       let localReqs = [];
@@ -324,9 +344,17 @@ export function RaahiProvider({ children }) {
     return localReq;
   };
 
-  const cancelRequest = async (requestId, reason) => {
+  const cancelRequest = async (target, reason) => {
+    const rawId = typeof target === 'object' ? (target?._id || target?.id || target?.requestId) : target;
+    const cleanId = String(rawId || '').trim();
+
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+      showToast('Cannot cancel request: Invalid or missing request identifier', 'error');
+      return false;
+    }
+
     try {
-      await apiClient.cancelRequest(requestId, reason);
+      await apiClient.cancelRequest(cleanId, reason);
       showToast('Request cancelled successfully', 'info');
       await refreshUserData();
       await refreshOpenRequests();
@@ -367,14 +395,22 @@ export function RaahiProvider({ children }) {
     showToast(`Active route set: ${route.origin} ➔ ${route.destination}`, 'info');
   };
 
-  const acceptRequest = async (requestId) => {
+  const acceptRequest = async (target) => {
+    const rawId = typeof target === 'object' ? (target?._id || target?.id || target?.requestId) : target;
+    const cleanId = String(rawId || '').trim();
+
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+      showToast('Cannot accept errand: Missing or invalid request identifier', 'error');
+      return false;
+    }
+
     if (!user) {
       showToast('Please sign in to accept delivery errands', 'error');
       return false;
     }
 
     try {
-      const res = await apiClient.acceptRequest(requestId);
+      const res = await apiClient.acceptRequest(cleanId);
       if (res?.data?.request) {
         showToast(res.message || 'Delivery accepted!');
         await refreshUserData();
@@ -387,9 +423,17 @@ export function RaahiProvider({ children }) {
     }
   };
 
-  const advanceDeliveryStatus = async (requestId, inputOtp) => {
+  const advanceDeliveryStatus = async (target, inputOtp) => {
+    const rawId = typeof target === 'object' ? (target?._id || target?.id || target?.requestId) : target;
+    const cleanId = String(rawId || '').trim();
+
+    if (!cleanId || cleanId === 'undefined' || cleanId === 'null') {
+      showToast('Cannot advance delivery: Missing or invalid request identifier', 'error');
+      return false;
+    }
+
     try {
-      const res = await apiClient.advanceDelivery(requestId, inputOtp);
+      const res = await apiClient.advanceDelivery(cleanId, inputOtp);
       if (res?.data?.request) {
         showToast(res.message || 'Delivery updated');
         await refreshUserData();

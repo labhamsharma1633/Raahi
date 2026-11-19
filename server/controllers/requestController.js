@@ -1,4 +1,5 @@
 // Customer Requests Controller
+const mongoose = require('mongoose');
 const Request = require('../models/Request');
 const User = require('../models/User');
 
@@ -136,7 +137,16 @@ exports.getMyRequests = async (req, res, next) => {
 // @access  Public
 exports.getRequestById = async (req, res, next) => {
   try {
-    const request = await Request.findById(req.params.id)
+    const requestId = req.params.id;
+
+    if (!requestId || requestId === 'undefined' || !mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid or missing request identifier',
+      });
+    }
+
+    const request = await Request.findById(requestId)
       .populate('customer', 'name college phone rating verified')
       .populate('assignedTraveller', 'name college phone rating verified');
 
@@ -161,7 +171,16 @@ exports.getRequestById = async (req, res, next) => {
 // @access  Private
 exports.cancelRequest = async (req, res, next) => {
   try {
-    const request = await Request.findById(req.params.id);
+    const requestId = req.params.id;
+
+    if (!requestId || requestId === 'undefined' || !mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid or missing request identifier',
+      });
+    }
+
+    const request = await Request.findById(requestId);
 
     if (!request) {
       return res.status(404).json({

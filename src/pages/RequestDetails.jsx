@@ -29,17 +29,20 @@ export default function RequestDetails({
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
 
+  const cleanId = String(requestId || '').trim();
+  const isValidId = cleanId && cleanId !== 'undefined' && cleanId !== 'null';
+
   // Find request from context by ID or fallback to prop
   const allKnown = [...(myRequests || []), ...(requests || [])];
-  const request = propRequest || fetchedRequest || allKnown.find(r => {
-    const rId = String(r._id || r.id);
-    return rId === String(requestId);
-  });
+  const request = propRequest || fetchedRequest || (isValidId ? allKnown.find(r => {
+    const rId = String(r._id || r.id || r.requestId || '');
+    return rId === cleanId || rId.endsWith(cleanId);
+  }) : null);
 
   useEffect(() => {
-    if (!request && requestId && requestId !== 'undefined') {
+    if (!request && isValidId) {
       setLoading(true);
-      apiClient.getRequestById(requestId)
+      apiClient.getRequestById(cleanId)
         .then(res => {
           if (res?.data?.request) {
             setFetchedRequest(res.data.request);
@@ -52,7 +55,7 @@ export default function RequestDetails({
           setLoading(false);
         });
     }
-  }, [requestId, request]);
+  }, [cleanId, isValidId, request]);
 
   if (loading) {
     return (

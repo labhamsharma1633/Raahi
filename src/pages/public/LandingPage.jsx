@@ -234,15 +234,18 @@ export default function LandingPage({ onNavigate }) {
           {/* Grid of Request Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredRequests.length > 0 ? (
-              filteredRequests.map((req) => (
-                <RequestCard
-                  key={req.id}
-                  request={req}
-                  isTravellerView={currentRole === 'traveller'}
-                  onSelect={(r) => onNavigate(`request-details-${r.id}`)}
-                  onAccept={(r) => acceptRequest(r.id)}
-                />
-              ))
+              filteredRequests.map((req) => {
+                const reqId = req._id || req.id || req.requestId;
+                return (
+                  <RequestCard
+                    key={reqId}
+                    request={req}
+                    isTravellerView={currentRole === 'traveller'}
+                    onSelect={(r) => onNavigate(`request-details-${r?._id || r?.id || reqId}`)}
+                    onAccept={(r) => acceptRequest(r?._id || r?.id || reqId)}
+                  />
+                );
+              })
             ) : (
               <div className="col-span-full py-12 bg-white rounded-3xl border border-dashed border-slate-200 text-center p-8">
                 <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
