@@ -24,6 +24,7 @@ import { REQUEST_STATUS } from '../../utils/constants';
 export default function CustomerDashboard({ onNavigate }) {
   const { 
     user, 
+    authLoading,
     currentRole, 
     setRole, 
     myRequests, 
@@ -34,6 +35,18 @@ export default function CustomerDashboard({ onNavigate }) {
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedReqForCancel, setSelectedReqForCancel] = useState(null);
+
+  // If user is not yet loaded, show clean loading placeholder instead of crashing
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-raahi-bg flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-raahi-teal border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-500">Loading your workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Active requests for this customer
   const activeRequests = (myRequests || []).filter(r => 
@@ -66,10 +79,10 @@ export default function CustomerDashboard({ onNavigate }) {
                 Customer Workspace
               </span>
               <span className="text-teal-400">•</span>
-              <span className="text-xs text-emerald-300 font-semibold">{user.college}</span>
+              <span className="text-xs text-emerald-300 font-semibold">{user?.college || user?.city || 'India Community'}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white mt-0.5">
-              Welcome back, {user.name}
+              Welcome back, {user?.name || 'Customer'}
             </h1>
           </div>
 

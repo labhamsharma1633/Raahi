@@ -22,9 +22,20 @@ import PrimaryButton from '../components/PrimaryButton';
 export default function Profile({ onNavigate }) {
   const { user, setUser, currentRole, setRole, travellerStats, customerStats, showToast } = useRaahi();
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(user.name);
-  const [phone, setPhone] = useState(user.phone || '+91 98765 43210');
-  const [college, setCollege] = useState(user.college);
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
+  const [college, setCollege] = useState(user?.college || user?.city || 'India Community');
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-raahi-bg flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-raahi-teal border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-500">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSave = (e) => {
     e.preventDefault();

@@ -37,7 +37,7 @@ import SupportPage from './pages/shared/SupportPage';
 
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState('home');
-  const { toast, setToast } = useRaahi();
+  const { user, authLoading, toast, setToast } = useRaahi();
 
   const handleNavigate = (screenId) => {
     setCurrentScreen(screenId);
@@ -46,6 +46,11 @@ function AppContent() {
 
   // Route resolver helper
   const renderScreen = () => {
+    // Protected dashboard routes: if not logged in and not loading, redirect to login
+    const isProtected = ['customer-dashboard', 'traveller-dashboard', 'customer-requests', 'customer-history', 'traveller-matching', 'traveller-active', 'traveller-earnings', 'traveller-completed', 'profile'].includes(currentScreen);
+    if (isProtected && !user && !authLoading) {
+      return <LoginPage onNavigate={handleNavigate} />;
+    }
     // Dynamic Request Details Route
     if (currentScreen.startsWith('request-details-')) {
       const reqId = currentScreen.replace('request-details-', '');
