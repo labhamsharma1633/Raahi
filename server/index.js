@@ -64,12 +64,27 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// REST Endpoints
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/requests', require('./routes/requests'));
-app.use('/api/routes', require('./routes/routes'));
-app.use('/api/deliveries', require('./routes/deliveries'));
-app.use('/api/smart-pool', require('./routes/smartPool'));
+// REST Endpoints (mounted on both /api/* and /* for full client URL compatibility)
+const authRoutes = require('./routes/auth');
+const requestRoutes = require('./routes/requests');
+const routeRoutes = require('./routes/routes');
+const deliveryRoutes = require('./routes/deliveries');
+const smartPoolRoutes = require('./routes/smartPool');
+
+app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
+app.use('/api/requests', requestRoutes);
+app.use('/requests', requestRoutes);
+
+app.use('/api/routes', routeRoutes);
+app.use('/routes', routeRoutes);
+
+app.use('/api/deliveries', deliveryRoutes);
+app.use('/deliveries', deliveryRoutes);
+
+app.use('/api/smart-pool', smartPoolRoutes);
+app.use('/smart-pool', smartPoolRoutes);
 
 // 404 — catch-all for undefined routes
 app.use((_req, res) => {

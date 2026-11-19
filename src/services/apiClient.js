@@ -1,7 +1,13 @@
 // Centralized API Client for Raahi Backend
-// Communicates with http://localhost:5000/api with automatic JWT injection
+// Communicates with backend with automatic JWT injection and URL normalization
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Normalize: remove trailing slashes and ensure /api prefix is present
+let cleanBase = String(rawBase).trim().replace(/\/+$/, '');
+if (!cleanBase.endsWith('/api')) {
+  cleanBase = `${cleanBase}/api`;
+}
+const API_BASE_URL = cleanBase;
 
 class ApiClient {
   constructor() {
