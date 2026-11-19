@@ -257,15 +257,25 @@ export default function TravellerDashboard({ onNavigate }) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {matchingRequests.slice(0, 4).map((req) => (
-                  <RequestCard
-                    key={req.id}
-                    request={req}
-                    isTravellerView={true}
-                    onSelect={(r) => onNavigate(`request-details-${r.id}`)}
-                    onAccept={(r) => acceptRequest(r.id)}
-                  />
-                ))}
+                {matchingRequests && matchingRequests.length > 0 ? (
+                  matchingRequests.slice(0, 4).map((req) => {
+                    const reqId = req._id || req.id;
+                    return (
+                      <RequestCard
+                        key={reqId}
+                        request={req}
+                        isTravellerView={true}
+                        onSelect={() => onNavigate(`request-details-${reqId}`)}
+                        onAccept={() => acceptRequest(reqId)}
+                      />
+                    );
+                  })
+                ) : (
+                  <div className="col-span-full py-8 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                    <p className="text-xs text-slate-500 font-medium">No route matching errands right now.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Publish or adjust your commute route to discover nearby errands.</p>
+                  </div>
+                )}
               </div>
             </div>
 

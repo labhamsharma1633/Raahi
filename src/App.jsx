@@ -1,8 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, Component } from 'react';
 import { RaahiProvider, useRaahi } from './context/RaahiContext';
 import AppHeader from './components/AppHeader';
 import AppFooter from './components/AppFooter';
 import Toast from './components/Toast';
+
+// Lightweight Error Boundary to prevent blank screens
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[Raahi Runtime Error]:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-raahi-bg flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-4">
+            <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl font-bold">
+              !
+            </div>
+            <h2 className="text-lg font-black text-slate-900">Something went wrong</h2>
+            <p className="text-xs text-slate-500">
+              An unexpected error occurred while rendering this view.
+            </p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.href = '/';
+              }}
+              className="bg-raahi-teal text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-[#072426] transition-colors"
+            >
+              Return to Home
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Public Pages
 import LandingPage from './pages/public/LandingPage';
@@ -158,7 +199,9 @@ function AppContent() {
 
       {/* Screen Router Body */}
       <main className="flex-1">
-        {renderScreen()}
+        <ErrorBoundary>
+          {renderScreen()}
+        </ErrorBoundary>
       </main>
 
       {/* Global Interactive Toast Feedback */}

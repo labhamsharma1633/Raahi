@@ -177,7 +177,7 @@ export default function CustomerDashboard({ onNavigate }) {
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <span>Live Delivery Tracking ({mostRecentActive.id})</span>
+                      <span>Live Delivery Tracking ({mostRecentActive._id || mostRecentActive.id})</span>
                     </span>
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
                       {mostRecentActive.title}
@@ -186,7 +186,7 @@ export default function CustomerDashboard({ onNavigate }) {
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => onNavigate(`tracking-${mostRecentActive.id}`)}
+                      onClick={() => onNavigate(`tracking-${mostRecentActive._id || mostRecentActive.id}`)}
                       className="bg-raahi-teal hover:bg-[#072426] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
                     >
                       <span>Open Live Tracker</span>
@@ -208,13 +208,13 @@ export default function CustomerDashboard({ onNavigate }) {
                   <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70">
                     <span className="text-[10px] text-slate-400 uppercase font-bold block">Pickup Store / Spot</span>
                     <strong className="text-slate-900 text-sm block mt-0.5">{mostRecentActive.storeOrPickup}</strong>
-                    <span className="text-slate-500">{mostRecentActive.pickupArea}</span>
+                    <span className="text-slate-500">{mostRecentActive.pickupArea || mostRecentActive.pickupLocation?.formattedAddress}</span>
                   </div>
 
                   <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/70">
                     <span className="text-[10px] text-slate-400 uppercase font-bold block">Delivery Destination</span>
                     <strong className="text-slate-900 text-sm block mt-0.5">{mostRecentActive.destination}</strong>
-                    <span className="text-slate-500">{mostRecentActive.dropArea}</span>
+                    <span className="text-slate-500">{mostRecentActive.dropArea || mostRecentActive.destinationLocation?.formattedAddress}</span>
                   </div>
 
                   <div className="bg-teal-50/70 p-3.5 rounded-2xl border border-teal-200/80 text-center flex flex-col justify-center">
@@ -233,20 +233,20 @@ export default function CustomerDashboard({ onNavigate }) {
             {/* Quick Actions Grid */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-slate-800">
-                Place a Campus Errand
+                Place an Errand
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ActionCard
                   type="buy"
                   title="Buy & Deliver"
-                  subtitle="Have a travelling student purchase items from campus markets and bring them to you."
+                  subtitle="Have a commuter purchase items from local markets and bring them along their route."
                   badgeText="Food, Pharmacy & Supplies"
                   onClick={() => onNavigate('buy')}
                 />
                 <ActionCard
                   type="pickup"
                   title="Pick Up & Deliver"
-                  subtitle="Have a student collect pre-printed notes, hostel laundry, or reserved library books."
+                  subtitle="Have a commuter collect a package, laundry, or pre-paid order along their way."
                   badgeText="Pre-Paid Parcels"
                   onClick={() => onNavigate('pickup')}
                 />
@@ -263,47 +263,57 @@ export default function CustomerDashboard({ onNavigate }) {
                   onClick={() => onNavigate('customer-requests')}
                   className="text-xs font-bold text-raahi-teal hover:underline flex items-center gap-1"
                 >
-                  <span>View All ({requests.length})</span>
+                  <span>View All ({myRequests?.length || 0})</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
               <div className="space-y-3">
-                {requests.slice(0, 4).map((req) => (
-                  <div 
-                    key={req.id} 
-                    className="p-4 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                          req.type === 'buy' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-900'
-                        }`}>
-                          {req.type === 'buy' ? 'Buy & Deliver' : 'Pick Up'}
-                        </span>
-                        <span className="text-xs font-mono text-slate-400 font-medium">#{req.id}</span>
-                        <span className="text-xs font-bold text-slate-700">• {req.status}</span>
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-900">{req.title}</h4>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {req.storeOrPickup} ➔ {req.destination}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 self-end sm:self-center">
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block font-semibold">REWARD</span>
-                        <span className="text-xs font-bold text-emerald-700">₹{req.rewardFee}</span>
-                      </div>
-                      <button
-                        onClick={() => onNavigate(`request-details-${req.id}`)}
-                        className="text-xs font-bold text-raahi-teal bg-white px-3 py-1.5 rounded-xl border border-slate-200 hover:border-teal-300"
+                {myRequests && myRequests.length > 0 ? (
+                  myRequests.slice(0, 4).map((req) => {
+                    const reqId = req._id || req.id;
+                    return (
+                      <div 
+                        key={reqId} 
+                        className="p-4 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
-                        Details
-                      </button>
-                    </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                              req.type === 'buy' ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-900'
+                            }`}>
+                              {req.type === 'buy' ? 'Buy & Deliver' : 'Pick Up'}
+                            </span>
+                            <span className="text-xs font-mono text-slate-400 font-medium">#{String(reqId).slice(-6)}</span>
+                            <span className="text-xs font-bold text-slate-700">• {req.status}</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-900">{req.title}</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {req.storeOrPickup} ➔ {req.destination}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <div className="text-right">
+                            <span className="text-[10px] text-slate-400 block font-semibold">REWARD</span>
+                            <span className="text-xs font-bold text-emerald-700">₹{req.rewardFee}</span>
+                          </div>
+                          <button
+                            onClick={() => onNavigate(`request-details-${reqId}`)}
+                            className="text-xs font-bold text-raahi-teal bg-white px-3 py-1.5 rounded-xl border border-slate-200 hover:border-teal-300"
+                          >
+                            Details
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <p className="text-xs text-slate-500 font-medium">You haven't posted any errand requests yet.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Need something delivered? Choose an option above to get started.</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
