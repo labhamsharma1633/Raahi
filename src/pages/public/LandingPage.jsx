@@ -288,10 +288,10 @@ export default function LandingPage({ onNavigate }) {
               <span>OFFICIAL EXPLAINER</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Get to know Raahi in 60 seconds.
+              See how Raahi makes everyday life easier.
             </h2>
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-              Discover how Raahi brings people, journeys and communities together to make everyday convenience smarter.
+              Real-life problems. Simple community-powered solutions.
             </p>
           </div>
 
