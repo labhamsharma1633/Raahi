@@ -73,6 +73,7 @@ export default function AppHeader({
 
   const navLinks = [
     { id: 'home', label: 'Explore' },
+    { id: 'circles', label: 'Circles' },
     { id: 'how-it-works', label: 'How It Works' },
     { id: 'about', label: 'About Raahi' },
   ];

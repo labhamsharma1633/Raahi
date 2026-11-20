@@ -70,6 +70,7 @@ const requestRoutes = require('./routes/requests');
 const routeRoutes = require('./routes/routes');
 const deliveryRoutes = require('./routes/deliveries');
 const smartPoolRoutes = require('./routes/smartPool');
+const circleRoutes = require('./routes/circles');
 
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
@@ -85,6 +86,9 @@ app.use('/deliveries', deliveryRoutes);
 
 app.use('/api/smart-pool', smartPoolRoutes);
 app.use('/smart-pool', smartPoolRoutes);
+
+app.use('/api/circles', circleRoutes);
+app.use('/circles', circleRoutes);
 
 // 404 — catch-all for undefined routes
 app.use((_req, res) => {

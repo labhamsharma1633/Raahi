@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   Footprints,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react';
 
 export default function DashboardSidebar({ 
@@ -24,6 +25,7 @@ export default function DashboardSidebar({
 
   const customerNav = [
     { id: 'customer-dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+    { id: 'circles', label: 'Raahi Circles', icon: Users },
     { id: 'buy', label: 'New Buy & Deliver', icon: ShoppingBag },
     { id: 'pickup', label: 'New Pick Up & Deliver', icon: Package },
     { id: 'customer-requests', label: 'My Requests', icon: ClipboardList },
@@ -33,6 +35,7 @@ export default function DashboardSidebar({
 
   const travellerNav = [
     { id: 'traveller-dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
+    { id: 'circles', label: 'Raahi Circles', icon: Users },
     { id: 'routes', label: 'Publish My Route', icon: Compass },
     { id: 'traveller-matching', label: 'Explore Matching Tasks', icon: Footprints },
     { id: 'traveller-active', label: 'Active Deliveries', icon: ClipboardList },

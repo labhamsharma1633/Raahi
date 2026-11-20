@@ -206,6 +206,88 @@ class ApiClient {
       body: JSON.stringify({ reason }),
     });
   }
+
+  // Raahi Circles Foundation APIs
+  async createCircle(circleData) {
+    return await this.request('/circles', {
+      method: 'POST',
+      body: JSON.stringify(circleData),
+    });
+  }
+
+  async getDiscoverableCircles(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await this.request(`/circles/discover${query ? `?${query}` : ''}`);
+  }
+
+  async getMyCircles() {
+    return await this.request('/circles/my');
+  }
+
+  async getCircleById(id) {
+    return await this.request(`/circles/${id}`);
+  }
+
+  async requestJoinCircle(id) {
+    return await this.request(`/circles/${id}/request-join`, {
+      method: 'POST',
+    });
+  }
+
+  async joinCircleByInvite(inviteCode) {
+    return await this.request('/circles/join-invite', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode }),
+    });
+  }
+
+  async regenerateCircleInvite(id) {
+    return await this.request(`/circles/${id}/invite/regenerate`, {
+      method: 'POST',
+    });
+  }
+
+  async getCircleMembers(id) {
+    return await this.request(`/circles/${id}/members`);
+  }
+
+  async getPendingCircleRequests(id) {
+    return await this.request(`/circles/${id}/pending-requests`);
+  }
+
+  async handleCircleMembershipRequest(id, membershipId, action) {
+    return await this.request(`/circles/${id}/handle-request`, {
+      method: 'POST',
+      body: JSON.stringify({ membershipId, action }),
+    });
+  }
+
+  async updateCircleMemberRole(id, memberUserId, newRole) {
+    return await this.request(`/circles/${id}/member-role`, {
+      method: 'PUT',
+      body: JSON.stringify({ memberUserId, newRole }),
+    });
+  }
+
+  async removeCircleMember(id, userId) {
+    return await this.request(`/circles/${id}/member/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateCircleSettings(id, settings) {
+    return await this.request(`/circles/${id}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async toggleCircleBreakMode(id, data) {
+    return await this.request(`/circles/${id}/break-mode`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

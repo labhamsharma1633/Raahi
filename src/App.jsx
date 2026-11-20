@@ -77,6 +77,12 @@ import ActivityPage from './pages/shared/ActivityPage';
 import SettingsPage from './pages/shared/SettingsPage';
 import SupportPage from './pages/shared/SupportPage';
 
+// Raahi Circles Pages
+import MyCirclesPage from './pages/circles/MyCirclesPage';
+import CircleDiscoveryPage from './pages/circles/CircleDiscoveryPage';
+import CreateCirclePage from './pages/circles/CreateCirclePage';
+import CircleDashboardPage from './pages/circles/CircleDashboardPage';
+
 function AppContent() {
   const getInitialScreen = () => {
     if (typeof window !== 'undefined' && window.location.pathname) {
@@ -174,7 +180,25 @@ function AppContent() {
       );
     }
 
+    // Dynamic Circle Dashboard Route
+    if (currentScreen.startsWith('circle-') && !currentScreen.startsWith('circles-')) {
+      const circleId = currentScreen.replace('circle-', '');
+      return (
+        <CircleDashboardPage
+          circleId={circleId}
+          onNavigate={handleNavigate}
+        />
+      );
+    }
+
     switch (currentScreen) {
+      // Raahi Circles Screens
+      case 'circles':
+        return <MyCirclesPage onNavigate={handleNavigate} />;
+      case 'circles-discover':
+        return <CircleDiscoveryPage onNavigate={handleNavigate} />;
+      case 'circles-create':
+        return <CreateCirclePage onNavigate={handleNavigate} />;
       // Public
       case 'home':
         return <LandingPage onNavigate={handleNavigate} />;
