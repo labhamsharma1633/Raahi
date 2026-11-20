@@ -71,6 +71,7 @@ const routeRoutes = require('./routes/routes');
 const deliveryRoutes = require('./routes/deliveries');
 const smartPoolRoutes = require('./routes/smartPool');
 const circleRoutes = require('./routes/circles');
+const circleErrandRoutes = require('./routes/circleErrands');
 
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
@@ -90,20 +91,21 @@ app.use('/smart-pool', smartPoolRoutes);
 app.use('/api/circles', circleRoutes);
 app.use('/circles', circleRoutes);
 
+app.use('/api/circle-errands', circleErrandRoutes);
+app.use('/circle-errands', circleErrandRoutes);
+
 // 404 — catch-all for undefined routes
 app.use((_req, res) => {
   res.status(404).json({ status: 'error', message: 'Endpoint not found' });
 });
 
-// Global error handler — never expose raw traces to clients
+// Global error handler — clean messages
 app.use((err, _req, res, _next) => {
-  console.error('[ERROR]', err.message);
+  console.error('[ERROR]', err.message || err);
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     status: 'error',
-    message: process.env.NODE_ENV === 'production'
-      ? 'An unexpected error occurred'
-      : err.message,
+    message: err.message || 'An unexpected error occurred',
   });
 });
 

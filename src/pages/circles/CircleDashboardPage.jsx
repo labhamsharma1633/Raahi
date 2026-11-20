@@ -22,10 +22,13 @@ import {
   UserCheck,
   UserMinus,
   AlertTriangle,
+  Plus,
 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import { useRaahi } from '../../context/RaahiContext';
 import PrimaryButton from '../../components/PrimaryButton';
+import { CreateErrandModal } from '../../components/circles/CreateErrandModal';
+import { QuickErrandCard } from '../../components/circles/QuickErrandCard';
 
 export default function CircleDashboardPage({ circleId, onNavigate }) {
   const { user, showToast } = useRaahi();
@@ -38,6 +41,26 @@ export default function CircleDashboardPage({ circleId, onNavigate }) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [breakModeActive, setBreakModeActive] = useState(false);
   const [updatingBreak, setUpdatingBreak] = useState(false);
+
+  // Quick Errands State (Phase 2)
+  const [errands, setErrands] = useState([]);
+  const [loadingErrands, setLoadingErrands] = useState(false);
+  const [isCreateErrandOpen, setIsCreateErrandOpen] = useState(false);
+  const [errandFilter, setErrandFilter] = useState('ALL');
+
+  const fetchErrands = async () => {
+    try {
+      setLoadingErrands(true);
+      const res = await apiClient.getCircleErrands(circleId);
+      if (res?.data?.errands) {
+        setErrands(res.data.errands);
+      }
+    } catch (err) {
+      console.warn('Failed to load circle errands:', err);
+    } finally {
+      setLoadingErrands(false);
+    }
+  };
 
   const fetchCircleData = async () => {
     try {
@@ -68,8 +91,17 @@ export default function CircleDashboardPage({ circleId, onNavigate }) {
   };
 
   useEffect(() => {
-    if (circleId) fetchCircleData();
+    if (circleId) {
+      fetchCircleData();
+      fetchErrands();
+    }
   }, [circleId]);
+
+  useEffect(() => {
+    if (activeTab === 'errands' && circleId) {
+      fetchErrands();
+    }
+  }, [activeTab, circleId]);
 
   const handleCopyInvite = () => {
     if (circle?.inviteCode) {
@@ -375,28 +407,143 @@ export default function CircleDashboardPage({ circleId, onNavigate }) {
           </div>
         )}
 
-        {/* TAB 2: QUICK ERRANDS PLACEHOLDER */}
+        {/* TAB 2: QUICK ERRANDS HUB (PHASE 2) */}
         {activeTab === 'errands' && (
-          <div className="bg-white rounded-3xl p-10 border border-raahi-border shadow-soft text-center space-y-4 max-w-xl mx-auto">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 text-raahi-teal flex items-center justify-center mx-auto">
-              <ShoppingBag className="w-6 h-6" />
+          <div className="space-y-6">
+            {/* Errands Controls & Action Bar */}
+            <div className="bg-white rounded-3xl p-6 border border-raahi-border shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-teal-700" />
+                  Quick Errands & Peer Pickups
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Small grocery runs, cafeteria orders, and parcel pickups fulfilled by trusted circle peers.
+                </p>
+              </div>
+
+              {isMember && (
+                <button
+                  onClick={() => setIsCreateErrandOpen(true)}
+                  className="px-5 py-2.5 rounded-2xl bg-[#0D3B3E] hover:bg-[#124e52] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 shrink-0"
+                >
+                  <Plus className="w-4 h-4 text-emerald-300" />
+                  Post Quick Errand
+                </button>
+              )}
             </div>
-            <div>
-              <span className="text-xs font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950">
-                Phase 2 Ready
-              </span>
-              <h3 className="text-base font-extrabold text-slate-900 mt-2">
-                Quick Errands Hub
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                Members will post immediate shopping or pickup requests here. Nearby eligible peers accept them, purchase or collect items, and hand them over using 4-digit OTP security.
-              </p>
+
+            {/* Break Mode Helpers Banner */}
+            {members.filter(m => m.breakMode?.enabled).length > 0 && (
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-200/80 rounded-2xl p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <Coffee className="w-4 h-4" />
+                </div>
+                <div className="text-xs text-emerald-950 flex-1">
+                  <span className="font-bold">Neighbours currently on a Break:</span>{' '}
+                  {members
+                    .filter(m => m.breakMode?.enabled)
+                    .map(m => m.user?.name || 'Peer')
+                    .join(', ')}{' '}
+                  are ready to pick up items on their way!
+                </div>
+              </div>
+            )}
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { id: 'ALL', label: 'All Errands', count: errands.length },
+                { id: 'OPEN', label: 'Open Requests', count: errands.filter(e => e.status === 'OPEN').length },
+                { 
+                  id: 'MY_REQUESTS', 
+                  label: 'My Requests', 
+                  count: errands.filter(e => (typeof e.requester === 'object' ? e.requester?._id : e.requester) === user?._id).length 
+                },
+                { 
+                  id: 'HELPING', 
+                  label: "I'm Helping", 
+                  count: errands.filter(e => (typeof e.helper === 'object' ? e.helper?._id : e.helper) === user?._id).length 
+                },
+                { id: 'COMPLETED', label: 'Completed', count: errands.filter(e => e.status === 'COMPLETED').length },
+              ].map(filter => (
+                <button
+                  key={filter.id}
+                  onClick={() => setErrandFilter(filter.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    errandFilter === filter.id
+                      ? 'bg-[#0D3B3E] text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <span>{filter.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    errandFilter === filter.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {filter.count}
+                  </span>
+                </button>
+              ))}
             </div>
-            <div className="pt-2">
-              <span className="text-xs font-bold text-teal-800 bg-teal-50 px-4 py-2 rounded-xl border border-teal-200 inline-block">
-                Ready for Phase 2 Implementation
-              </span>
-            </div>
+
+            {/* Errands Grid */}
+            {loadingErrands ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+                <div className="w-8 h-8 border-3 border-teal-700 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold">Loading circle errands...</span>
+              </div>
+            ) : (() => {
+              const currentUserId = user?._id;
+              const filteredErrands = errands.filter(e => {
+                const reqId = typeof e.requester === 'object' ? e.requester?._id : e.requester;
+                const hlpId = typeof e.helper === 'object' ? e.helper?._id : e.helper;
+                if (errandFilter === 'OPEN') return e.status === 'OPEN';
+                if (errandFilter === 'MY_REQUESTS') return reqId === currentUserId;
+                if (errandFilter === 'HELPING') return hlpId === currentUserId;
+                if (errandFilter === 'COMPLETED') return e.status === 'COMPLETED';
+                return true;
+              });
+
+              if (filteredErrands.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl p-10 border border-raahi-border shadow-soft text-center max-w-md mx-auto space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mx-auto">
+                      <ShoppingBag className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800">No errands found</h4>
+                    <p className="text-xs text-slate-500">
+                      {errandFilter === 'ALL'
+                        ? 'There are no quick errands posted in this Circle yet.'
+                        : `No errands match the selected filter.`}
+                    </p>
+                    {isMember && (
+                      <button
+                        onClick={() => setIsCreateErrandOpen(true)}
+                        className="mt-2 px-4 py-2 bg-[#0D3B3E] text-white text-xs font-bold rounded-xl shadow-sm hover:bg-[#124e52] transition-colors"
+                      >
+                        Post the First Errand
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filteredErrands.map(errand => (
+                    <QuickErrandCard
+                      key={errand._id}
+                      errand={errand}
+                      currentUserId={user?._id}
+                      onUpdated={(updated) => {
+                        setErrands(prev => prev.map(item => item._id === updated._id ? updated : item));
+                        showToast('Errand status updated!');
+                      }}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -603,6 +750,20 @@ export default function CircleDashboardPage({ circleId, onNavigate }) {
         )}
 
       </div>
+
+      {/* Create Errand Modal */}
+      {circle && (
+        <CreateErrandModal
+          isOpen={isCreateErrandOpen}
+          onClose={() => setIsCreateErrandOpen(false)}
+          circleId={circleId}
+          circleName={circle.name}
+          onCreated={(newErrand) => {
+            setErrands((prev) => [newErrand, ...prev]);
+            showToast('Quick errand posted to Circle!');
+          }}
+        />
+      )}
     </div>
   );
 }

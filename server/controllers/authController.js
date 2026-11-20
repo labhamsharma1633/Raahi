@@ -2,9 +2,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'raahi_secure_jwt_secret_fallback_key_2026_prod';
+
 // Helper to generate signed JWT token
 function generateToken(id) {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id }, JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 }

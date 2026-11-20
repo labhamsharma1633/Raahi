@@ -288,6 +288,43 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Raahi Circles — Quick Errands APIs (Phase 2)
+  async createCircleErrand(errandData) {
+    return await this.request('/circle-errands', {
+      method: 'POST',
+      body: JSON.stringify(errandData),
+    });
+  }
+
+  async getCircleErrands(circleId, filter = {}) {
+    const query = new URLSearchParams(filter).toString();
+    return await this.request(`/circle-errands/circle/${circleId}${query ? `?${query}` : ''}`);
+  }
+
+  async getCircleErrandById(id) {
+    return await this.request(`/circle-errands/${id}`);
+  }
+
+  async acceptCircleErrand(id) {
+    return await this.request(`/circle-errands/${id}/accept`, {
+      method: 'POST',
+    });
+  }
+
+  async advanceCircleErrand(id, targetStatus, payload = {}) {
+    return await this.request(`/circle-errands/${id}/advance`, {
+      method: 'POST',
+      body: JSON.stringify({ targetStatus, ...payload }),
+    });
+  }
+
+  async cancelCircleErrand(id, reason = '') {
+    return await this.request(`/circle-errands/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
