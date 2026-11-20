@@ -8,9 +8,11 @@ import {
   ShieldCheck, 
   Users, 
   MapPin, 
-  IndianRupee 
+  IndianRupee,
+  Video
 } from 'lucide-react';
 import PrimaryButton from '../../components/PrimaryButton';
+import RaahiVideoPlayer from '../../components/video/RaahiVideoPlayer';
 
 export default function AboutPage({ onNavigate }) {
   return (
@@ -39,9 +41,31 @@ export default function AboutPage({ onNavigate }) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+        
+        {/* Dedicated 60-Second Video Section */}
+        <section className="space-y-6">
+          <div className="max-w-3xl space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 bg-teal-100/70 px-3 py-1 rounded-full">
+              <Video className="w-3.5 h-3.5 text-teal-700" />
+              <span>OFFICIAL EXPLAINER</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Get to know Raahi in 60 seconds.
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+              Discover how Raahi brings people, journeys and communities together to make everyday convenience smarter.
+            </p>
+          </div>
+
+          {/* Interactive 16:9 Video Player */}
+          <div className="max-w-4xl mx-auto">
+            <RaahiVideoPlayer />
+          </div>
+        </section>
+
         {/* The Problem & The Insight */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center pt-4 border-t border-slate-200/80">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 bg-teal-100/70 px-3 py-1 rounded-full">
               <Sparkles className="w-3.5 h-3.5 text-teal-700" />

@@ -3,6 +3,9 @@ import InteractiveHero from '../../components/showcase/InteractiveHero';
 import ScenarioComparison from '../../components/showcase/ScenarioComparison';
 import GroupShoppingSimulator from '../../components/showcase/GroupShoppingSimulator';
 import QuickErrandsSimulator from '../../components/showcase/QuickErrandsSimulator';
+import RaahiEcosystemSection from '../../components/showcase/RaahiEcosystemSection';
+import ShowcaseFinalCta from '../../components/showcase/ShowcaseFinalCta';
+import RaahiVideoPlayer from '../../components/video/RaahiVideoPlayer';
 import ActionCard from '../../components/ActionCard';
 import RequestCard from '../../components/RequestCard';
 import { useRaahi } from '../../context/RaahiContext';
@@ -18,7 +21,8 @@ import {
   Package, 
   Users, 
   MapPin, 
-  Clock 
+  Clock,
+  Video
 } from 'lucide-react';
 
 export default function LandingPage({ onNavigate }) {
@@ -45,7 +49,7 @@ export default function LandingPage({ onNavigate }) {
       {/* Interactive Hero Section (Section 1) */}
       <InteractiveHero 
         onExplore={() => scrollToSection('scenarios-showcase')}
-        onHowItWorks={() => onNavigate('how-it-works')}
+        onHowItWorks={() => scrollToSection('explainer-video-section')}
       />
 
       {/* Real-Life Problem Scenarios (Section 2) */}
@@ -275,7 +279,35 @@ export default function LandingPage({ onNavigate }) {
             )}
           </div>
         </section>
+
+        {/* Section 5: Explainer Video Section */}
+        <section id="explainer-video-section" className="space-y-6 pt-4 border-t border-slate-200">
+          <div className="max-w-3xl space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 bg-teal-100/70 px-3 py-1 rounded-full">
+              <Video className="w-3.5 h-3.5 text-teal-700" />
+              <span>OFFICIAL EXPLAINER</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Get to know Raahi in 60 seconds.
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+              Discover how Raahi brings people, journeys and communities together to make everyday convenience smarter.
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto">
+            <RaahiVideoPlayer />
+          </div>
+        </section>
       </div>
+
+      {/* Section 6: Complete Raahi Ecosystem */}
+      <div className="mt-16">
+        <RaahiEcosystemSection onNavigate={onNavigate} />
+      </div>
+
+      {/* Section 7: Final Interactive Community CTA */}
+      <ShowcaseFinalCta onNavigate={onNavigate} />
     </div>
   );
 }
