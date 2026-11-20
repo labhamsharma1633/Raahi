@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import HeroSection from '../../components/HeroSection';
+import InteractiveHero from '../../components/showcase/InteractiveHero';
+import ScenarioComparison from '../../components/showcase/ScenarioComparison';
+import GroupShoppingSimulator from '../../components/showcase/GroupShoppingSimulator';
 import ActionCard from '../../components/ActionCard';
 import RequestCard from '../../components/RequestCard';
 import { useRaahi } from '../../context/RaahiContext';
@@ -32,18 +34,32 @@ export default function LandingPage({ onNavigate }) {
     return matchesCategory && matchesSearch;
   });
 
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="pb-16 bg-raahi-bg">
-      {/* Hero Section */}
-      <HeroSection 
-        currentRole={currentRole}
-        onPrimaryAction={() => onNavigate(currentRole === 'customer' ? 'buy' : 'routes')}
-        onSecondaryAction={() => {
-          const el = document.getElementById('live-requests-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-        onRoleSwitch={(newRole) => setRole(newRole)}
+      {/* Interactive Hero Section (Section 1) */}
+      <InteractiveHero 
+        onExplore={() => scrollToSection('scenarios-showcase')}
+        onHowItWorks={() => onNavigate('how-it-works')}
       />
+
+      {/* Real-Life Problem Scenarios (Section 2) */}
+      <div id="scenarios-showcase">
+        <ScenarioComparison 
+          onExploreShopping={() => scrollToSection('group-shopping-showcase')}
+          onExploreErrands={() => {
+            const el = document.getElementById('errands-showcase') || document.getElementById('live-requests-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
+      </div>
+
+      {/* Interactive Group Shopping Basket Simulator (Section 3) */}
+      <GroupShoppingSimulator />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 space-y-16">
         {/* Section: Make an errand happen */}
