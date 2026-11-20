@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import InteractiveHero from '../../components/showcase/InteractiveHero';
 import ScenarioComparison from '../../components/showcase/ScenarioComparison';
 import GroupShoppingSimulator from '../../components/showcase/GroupShoppingSimulator';
+import QuickErrandsSimulator from '../../components/showcase/QuickErrandsSimulator';
 import ActionCard from '../../components/ActionCard';
 import RequestCard from '../../components/RequestCard';
 import { useRaahi } from '../../context/RaahiContext';
@@ -60,6 +61,9 @@ export default function LandingPage({ onNavigate }) {
 
       {/* Interactive Group Shopping Basket Simulator (Section 3) */}
       <GroupShoppingSimulator />
+
+      {/* Interactive Quick Errands Workflow Simulator (Section 4) */}
+      <QuickErrandsSimulator />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 space-y-16">
         {/* Section: Make an errand happen */}
